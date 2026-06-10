@@ -1,0 +1,160 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { supabase } from "@/lib/supabase/client";
+import DashboardLayout from "@/components/DashboardLayout";
+import { Wallet, TrendingUp, ArrowUpRight, ArrowDownRight, Plus, RefreshCw, FileText } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+
+interface CapitalConfig {
+  capital_disponible: number;
+  capital_en_calle: number;
+  ganancia_total: number;
+  total_prestado: number;
+}
+
+export default function Home() {
+  const [greeting, setGreeting] = useState("");
+
+  const { data: session } = useQuery({
+    queryKey: ["session"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      return user;
+    },
+  });
+
+  const { data: config, isLoading: loading } = useQuery({
+    queryKey: ["dashboardData", session?.id],
+    enabled: !!session?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("capital_config")
+        .select("*")
+        .eq("user_id", session!.id)
+        .single();
+
+      if (error) {
+        return {
+          capital_disponible: 0,
+          capital_en_calle: 0,
+          ganancia_total: 0,
+          total_prestado: 0,
+        };
+      }
+      return data as CapitalConfig;
+    },
+  });
+
+  useEffect(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) setGreeting("Buenos días");
+    else if (hour < 19) setGreeting("Buenas tardes");
+    else setGreeting("Buenas noches");
+  }, []);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("es-MX", {
+      style: "currency",
+      currency: "MXN",
+    }).format(amount);
+  };
+
+  const fullName = session?.user_metadata?.full_name || session?.email?.split("@")[0] || "Usuario";
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex h-full items-center justify-center pt-20">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  return (
+    <DashboardLayout>
+      <main className="flex-1 p-6 space-y-8 relative z-10">
+        <header className="flex items-center justify-between pt-2">
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white tracking-tight">Hola, {fullName}</h1>
+            <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Resumen de hoy</p>
+          </div>
+          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 shadow-[0_0_15px_rgba(45,212,191,0.3)] flex items-center justify-center text-white font-bold text-lg">
+            {fullName.charAt(0).toUpperCase()}
+          </div>
+        </header>
+
+        {/* Tarjeta Principal (Capital en Calle) */}
+        <section className="relative overflow-hidden rounded-[2rem] bg-zinc-900 dark:bg-white/5 border border-zinc-800 dark:border-white/10 p-6 shadow-2xl transition-colors duration-300">
+          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-teal-500/20 blur-3xl"></div>
+          <div className="relative z-10 flex flex-col gap-1">
+            <div className="flex items-center gap-2 text-teal-400 mb-2">
+              <Wallet size={16} />
+              <span className="text-xs font-bold uppercase tracking-wider">Capital Disponible</span>
+            </div>
+            <span className="text-4xl font-black tracking-tighter text-white">
+              {formatCurrency(config?.capital_disponible || 0)}
+            </span>
+            <div className="mt-4 flex items-center gap-2 text-sm">
+              <div className="flex items-center gap-1 text-teal-400 bg-teal-500/10 px-2 py-1 rounded-full">
+                <ArrowUpRight size={14} />
+                <span className="font-semibold text-xs">Activo</span>
+              </div>
+              <span className="text-zinc-400 text-xs">Rendimiento óptimo</span>
+            </div>
+          </div>
+        </section>
+
+        {/* KPIs Secundarios */}
+        <section className="grid grid-cols-2 gap-4">
+          <div className="rounded-[2rem] bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 p-5 shadow-lg dark:shadow-none transition-colors duration-300">
+            <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 mb-3">
+              <TrendingUp size={16} />
+              <span className="text-xs font-bold uppercase tracking-wider">En Calle</span>
+            </div>
+            <span className="text-2xl font-bold text-zinc-900 dark:text-white transition-colors duration-300">
+              {formatCurrency(config?.capital_en_calle || 0)}
+            </span>
+          </div>
+          <div className="rounded-[2rem] bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 p-5 shadow-lg dark:shadow-none transition-colors duration-300">
+            <div className="flex items-center gap-2 text-orange-500 dark:text-orange-400 mb-3">
+              <ArrowDownRight size={16} />
+              <span className="text-xs font-bold uppercase tracking-wider">Ganancia</span>
+            </div>
+            <span className="text-2xl font-bold text-zinc-900 dark:text-white transition-colors duration-300">
+              {formatCurrency(config?.ganancia_total || 0)}
+            </span>
+          </div>
+        </section>
+
+        {/* Acciones Rápidas */}
+        <section className="space-y-4">
+          <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-widest pl-1">Acciones Rápidas</h3>
+          <div className="grid grid-cols-3 gap-3">
+            <Link href="/prestamos/nuevo" className="group flex flex-col items-center gap-3 rounded-3xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 py-5 active:scale-95 transition-all shadow-lg dark:shadow-none hover:bg-zinc-50 dark:hover:bg-white/10">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 group-hover:shadow-[0_0_15px_rgba(0,0,0,0.2)] dark:group-hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all">
+                <Plus size={24} />
+              </div>
+              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Préstamo</span>
+            </Link>
+            <Link href="/pagos/nuevo" className="group flex flex-col items-center gap-3 rounded-3xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 py-5 active:scale-95 transition-all shadow-lg dark:shadow-none hover:bg-zinc-50 dark:hover:bg-white/10">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400 transition-all">
+                <RefreshCw size={24} />
+              </div>
+              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Pago</span>
+            </Link>
+            <button className="group flex flex-col items-center gap-3 rounded-3xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 py-5 active:scale-95 transition-all shadow-lg dark:shadow-none hover:bg-zinc-50 dark:hover:bg-white/10">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 transition-all">
+                <FileText size={24} />
+              </div>
+              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Reporte</span>
+            </button>
+          </div>
+        </section>
+
+      </main>
+    </DashboardLayout>
+  );
+}

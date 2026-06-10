@@ -1,0 +1,155 @@
+name: Build and Release Android APK
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    environment: PrestaFacil
+
+    steps:
+      # 1️⃣ Checkout repository
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2️⃣ Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      # 3️⃣ Setup pnpm
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      # 4️⃣ Enable Corepack & ensure pnpm
+      - name: Enable Corepack & ensure pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10 --activate
+
+      # 5️⃣ Install dependencies
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      # 6️⃣ Generate Android project if not exists
+      - name: Generate Android project
+        run: |
+          if [ ! -d android ]; then
+            pnpm exec cap add android
+          fi
+
+      # 7️⃣ Set app version and inject into Android App Gradle
+      - name: Set app version and inject into Gradle
+        run: |
+          VERSION_NAME=$(jq -r '.version' package.json)
+          VERSION_CODE=${GITHUB_RUN_NUMBER}
+          
+          echo "APP_VERSION=$VERSION_NAME" >> "$GITHUB_ENV"
+          
+          # Actualiza dinámicamente el versionCode y versionName en el Gradle del módulo app
+          sed -i "s/versionCode [0-9]*/versionCode $VERSION_CODE/" ./android/app/build.gradle
+          sed -i "s/versionName \"[^\"]*\"/versionName \"$VERSION_NAME\"/" ./android/app/build.gradle
+          
+          echo "Inyectado en Android -> versionCode: $VERSION_CODE, versionName: $VERSION_NAME"
+
+      # 8️⃣ Build Next.js
+      - name: Build Next.js
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$NEXT_PUBLIC_SUPABASE_URL" ] || [ -z "$NEXT_PUBLIC_SUPABASE_ANON_KEY" ]; then
+            echo "::error::🚨 SECRETOS NO DETECTADOS 🚨"
+            echo "Las variables NEXT_PUBLIC_SUPABASE_URL o NEXT_PUBLIC_SUPABASE_ANON_KEY están vacías."
+            echo "Por favor, verifica lo siguiente en GitHub:"
+            echo "1. Fueron agregados en 'Settings > Secrets and variables > Actions > Repository secrets'."
+            echo "2. Si los agregaste en 'Environment secrets', necesitas definir 'environment: PrestaFacil' en este job (build-apk)."
+            exit 1
+          fi
+          pnpm build
+
+      # 9️⃣ Setup Java
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # 1️⃣0️⃣ Setup Android SDK
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      # 1️⃣1️⃣ Sync Capacitor
+      - name: Sync Capacitor
+        run: pnpm exec cap sync android
+
+      # 1️⃣2️⃣ Configure release signing
+      - name: Configure release signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::🚨 FALTA EL SECRETO KEYSTORE_BASE64 🚨"
+            echo "Copia el contenido del archivo keystore_base64.txt y agrégalo a los secretos del repositorio en GitHub."
+            exit 1
+          fi
+          
+          # Decodificar el Keystore desde el secreto y guardarlo
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
+          
+          # Forzamos la eliminación de archivos de propiedades previos
+          rm -f android/gradle.properties
+          
+          # Escribimos los valores de firma Y activamos las flags de compatibilidad necesarias
+          cat << 'EOF' > android/gradle.properties
+          RELEASE_STORE_FILE=release.keystore
+          RELEASE_STORE_PASSWORD=PrestaFacil
+          RELEASE_KEY_ALIAS=prestafacil-alias
+          RELEASE_KEY_PASSWORD=PrestaFacil
+          
+          # Soporte para plugins heredados y dependencias biométricas/sqlite
+          android.useAndroidX=true
+          android.enableJetifier=true
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          EOF
+          echo "=== Archivo gradle.properties generado con éxito ==="
+
+      # 1️⃣3️⃣ Build and auto-sign release APK
+      - name: Build release APK
+        run: |
+          cd android
+          chmod +x gradlew
+          # El comando 'clean' borra compilaciones previas que causan el error del IncrementalSplitter
+          ./gradlew clean assembleRelease
+
+      # 1️⃣4️⃣ Upload APK as artifact
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: prestafacil-release-apk
+          path: android/app/build/outputs/apk/release/*.apk
+
+      # 1️⃣5️⃣ Create GitHub Release and upload APK
+      - name: Create GitHub Release and upload APK
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: android/app/build/outputs/apk/release/*.apk
+          tag: "v${{ env.APP_VERSION }}-${{ github.run_number }}"
+          name: "PrestaFácil v${{ env.APP_VERSION }}"
+          draft: false
+          prerelease: false
