@@ -7,6 +7,7 @@ import CustomSelect from "@/components/CustomSelect";
 import { ArrowLeft, Calculator, User, DollarSign, Calendar, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { CapitalConfig } from "@/types/database";
 
 interface Cliente {
   id: string;
@@ -126,6 +127,10 @@ export default function NuevoPrestamoPage() {
         .single();
 
       // Si se descuenta deuda, primero pagar los préstamos pendientes
+      let totalCapitalRecuperadoRefinanciamiento = 0;
+      let totalInteresGanadoRefinanciamiento = 0;
+      let totalMontoPagadoRefinanciamiento = 0;
+
       if (descontarDeuda && deudasActivas > 0 && prestamosPendientes.length > 0) {
         let montoPorDescontar = deudasActivas;
 
@@ -148,6 +153,10 @@ export default function NuevoPrestamoPage() {
           const proporcionCapital = prestamoData.monto / prestamoData.total_a_pagar;
           const capitalAbonado = montoADescontar * proporcionCapital;
           const interesPagado = montoADescontar - capitalAbonado;
+
+          totalCapitalRecuperadoRefinanciamiento += capitalAbonado;
+          totalInteresGanadoRefinanciamiento += interesPagado;
+          totalMontoPagadoRefinanciamiento += montoADescontar;
 
           // Crear registro de pago
           await supabase.from("pagos").insert({
@@ -205,12 +214,20 @@ export default function NuevoPrestamoPage() {
 
       // Actualizar el capital_config en BD
       if (configData) {
+        const nuevoCapitalDisponible = Number(configData.capital_disponible) - montoNeto + totalMontoPagadoRefinanciamiento;
+        const nuevoCapitalEnCalle = Number(configData.capital_en_calle) + montoNeto - totalCapitalRecuperadoRefinanciamiento;
+        const nuevaGananciaTotal = Number(configData.ganancia_total) + totalInteresGanadoRefinanciamiento;
+        const nuevoTotalRecuperado = Number(configData.total_recuperado) + totalMontoPagadoRefinanciamiento;
+        const nuevoTotalPrestado = Number(configData.total_prestado) + montoNeto;
+
         const { error: updateError } = await supabase
           .from("capital_config")
           .update({
-            capital_disponible: Number(configData.capital_disponible) - montoNeto,
-            capital_en_calle: Number(configData.capital_en_calle) + montoNeto,
-            total_prestado: Number(configData.total_prestado) + montoNeto
+            capital_disponible: nuevoCapitalDisponible,
+            capital_en_calle: nuevoCapitalEnCalle,
+            ganancia_total: nuevaGananciaTotal,
+            total_recuperado: nuevoTotalRecuperado,
+            total_prestado: nuevoTotalPrestado
           })
           .eq("user_id", user.id);
 
@@ -219,14 +236,16 @@ export default function NuevoPrestamoPage() {
           throw updateError;
         }
 
-        // Actualizar el caché de React Query INMEDIATAMENTE para evitar parpadeos de datos viejos
-        queryClient.setQueryData(["dashboardData", user.id], (old: any) => {
+        // Actualizar el caché de React Query INMEDIATAMENTE
+        queryClient.setQueryData(["dashboardData", user.id], (old: CapitalConfig | undefined) => {
           if (!old) return old;
           return {
             ...old,
-            capital_disponible: Number(old.capital_disponible) - montoNeto,
-            capital_en_calle: Number(old.capital_en_calle) + montoNeto,
-            total_prestado: Number(old.total_prestado) + montoNeto
+            capital_disponible: nuevoCapitalDisponible,
+            capital_en_calle: nuevoCapitalEnCalle,
+            ganancia_total: nuevaGananciaTotal,
+            total_recuperado: nuevoTotalRecuperado,
+            total_prestado: nuevoTotalPrestado
           };
         });
       }

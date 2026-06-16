@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { ReactQueryProvider } from "@/components/ReactQueryProvider";
-import { AutoUpdater } from "@/components/AutoUpdater";
 import { Toaster } from "sonner";
 
 const geistSans = Geist({
@@ -31,7 +30,6 @@ export default function RootLayout({
       <body className="mx-auto flex min-h-full max-w-md flex-col shadow-[0_0_50px_rgba(0,0,0,0.1)] dark:shadow-[0_0_50px_rgba(0,0,0,0.5)] relative overflow-x-hidden antialiased selection:bg-teal-500/30">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <ReactQueryProvider>
-            <AutoUpdater />
             {/* Notificaciones Premium */}
             <Toaster position="top-center" richColors theme="system" />
             {/* Fondo Global */}

@@ -4,28 +4,9 @@ import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
-import { ArrowLeft, User, Phone, MapPin, Calendar, DollarSign, Activity } from "lucide-react";
-
-interface Prestamo {
-  id: string;
-  monto: number;
-  saldo_pendiente: number;
-  estado: string;
-  fecha_inicio: string;
-  total_a_pagar: number;
-  cuotas_pagadas: number;
-  numero_cuotas: number;
-}
-
-interface Cliente {
-  id: string;
-  nombre: string;
-  telefono: string;
-  direccion: string;
-  notas: string;
-  estado: string;
-  prestamos?: Prestamo[];
-}
+import { ArrowLeft, Phone, MapPin, DollarSign, Activity } from "lucide-react";
+import { clienteService } from "@/services/databaseService";
+import { Cliente } from "@/types/database";
 
 function ClienteDetalleContent() {
   const router = useRouter();
@@ -41,19 +22,16 @@ function ClienteDetalleContent() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        const { data } = await supabase
-          .from("clientes")
-          .select(`
-            *,
-            prestamos (*)
-          `)
-          .eq("id", id)
-          .single();
+        const data = await clienteService.getById(id, user.id);
 
         if (data) {
           // Sort prestamos by date descending
           if (data.prestamos) {
-            data.prestamos.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+            data.prestamos.sort((a, b) => {
+              const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+              const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+              return dateB - dateA;
+            });
           }
           setCliente(data);
         }

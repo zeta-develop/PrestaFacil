@@ -4,20 +4,29 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import CustomSelect from "@/components/CustomSelect";
-import { ArrowLeft, User, DollarSign, Activity } from "lucide-react";
+import { ArrowLeft, User, DollarSign } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 interface Prestamo {
   id: string;
   cliente_id: string;
+  monto: number;
+  total_a_pagar: number;
   saldo_pendiente: number;
-  cuota_monto: number;
+  valor_cuota: number;
+  cuotas_pagadas: number;
+  capital_recuperado: number;
+  interes_ganado: number;
+  estado: string;
   clientes: {
     nombre: string;
-  };
+  } | null;
 }
 
 export default function NuevoPagoPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [prestamos, setPrestamos] = useState<Prestamo[]>([]);
   const [selectedPrestamo, setSelectedPrestamo] = useState<Prestamo | null>(null);
@@ -35,18 +44,14 @@ export default function NuevoPagoPage() {
       const { data } = await supabase
         .from("prestamos")
         .select(`
-          id,
-          cliente_id,
-          saldo_pendiente,
-          cuota_monto,
+          *,
           clientes ( nombre )
         `)
         .eq("user_id", user.id)
         .eq("estado", "activo");
       
       if (data) {
-        // @ts-ignore
-        setPrestamos(data);
+        setPrestamos(data as unknown as Prestamo[]);
       }
     };
     fetchPrestamos();
@@ -57,52 +62,96 @@ export default function NuevoPagoPage() {
     setSelectedPrestamo(p || null);
     setFormData({
       prestamo_id: prestamoId,
-      monto_pagado: p ? p.cuota_monto.toString() : "",
+      monto_pagado: p ? p.valor_cuota.toString() : "",
     });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const monto = parseFloat(formData.monto_pagado) || 0;
+    const montoPago = parseFloat(formData.monto_pagado) || 0;
     
-    if (!selectedPrestamo || monto <= 0) return alert("Completa los datos correctamente.");
-    if (monto > selectedPrestamo.saldo_pendiente) return alert("El monto supera el saldo pendiente.");
+    if (!selectedPrestamo || montoPago <= 0) {
+      toast.error("Completa los datos correctamente.");
+      return;
+    }
+    if (montoPago > selectedPrestamo.saldo_pendiente + 0.01) {
+      toast.error("El monto supera el saldo pendiente.");
+      return;
+    }
 
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // 1. Insert pago
+      // 1. Matemáticas Proporcionales
+      const proporcionCapital = selectedPrestamo.monto / selectedPrestamo.total_a_pagar;
+      const capitalAbonado = montoPago * proporcionCapital;
+      const interesPagado = montoPago - capitalAbonado;
+
+      const nuevoSaldo = selectedPrestamo.saldo_pendiente - montoPago;
+      const nuevoCapitalRecuperado = Number(selectedPrestamo.capital_recuperado) + capitalAbonado;
+      const nuevoInteresGanado = Number(selectedPrestamo.interes_ganado) + interesPagado;
+      const nuevasCuotasPagadas = selectedPrestamo.cuotas_pagadas + 1;
+      const nuevoEstado = nuevoSaldo <= 0.01 ? "pagado" : selectedPrestamo.estado;
+
+      // 2. Insertar Pago
       const { error: pagoError } = await supabase.from("pagos").insert({
-        prestamo_id: selectedPrestamo.id,
         user_id: user.id,
-        cliente_id: selectedPrestamo.cliente_id,
-        monto_pagado: monto,
-        estado: "completado"
+        prestamo_id: selectedPrestamo.id,
+        monto_pagado: montoPago,
+        capital_abonado: capitalAbonado,
+        interes_pagado: interesPagado,
+        numero_cuota: nuevasCuotasPagadas,
+        metodo_pago: "efectivo"
       });
 
       if (pagoError) throw pagoError;
 
-      // 2. Update prestamo saldo
-      const nuevoSaldo = selectedPrestamo.saldo_pendiente - monto;
-      const estadoNuevo = nuevoSaldo <= 0 ? "pagado" : "activo";
-
+      // 3. Actualizar Préstamo
       const { error: updateError } = await supabase
         .from("prestamos")
         .update({ 
-          saldo_pendiente: nuevoSaldo,
-          estado: estadoNuevo
+          saldo_pendiente: Math.max(nuevoSaldo, 0),
+          cuotas_pagadas: nuevasCuotasPagadas,
+          capital_recuperado: nuevoCapitalRecuperado,
+          interes_ganado: nuevoInteresGanado,
+          estado: nuevoEstado
         })
         .eq("id", selectedPrestamo.id);
 
       if (updateError) throw updateError;
+
+      // 4. Actualizar Capital Config
+      const { data: configData } = await supabase
+        .from("capital_config")
+        .select("*")
+        .eq("user_id", user.id)
+        .single();
+
+      if (configData) {
+        const { error: configError } = await supabase
+          .from("capital_config")
+          .update({
+            capital_disponible: Number(configData.capital_disponible) + montoPago,
+            capital_en_calle: Number(configData.capital_en_calle) - capitalAbonado,
+            ganancia_total: Number(configData.ganancia_total) + interesPagado,
+            total_recuperado: Number(configData.total_recuperado) + montoPago
+          })
+          .eq("user_id", user.id);
+        
+        if (configError) console.error("Error updating capital_config:", configError);
+      }
       
-      alert("Pago registrado exitosamente");
-      router.push("/");
+      queryClient.invalidateQueries({ queryKey: ["prestamos"] });
+      queryClient.invalidateQueries({ queryKey: ["pagos"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
+
+      toast.success("Pago registrado exitosamente");
+      router.push("/pagos");
     } catch (error) {
       console.error("Error creating pago:", error);
-      alert("Error al registrar el pago");
+      toast.error("Error al registrar el pago");
     } finally {
       setLoading(false);
     }
@@ -146,10 +195,11 @@ export default function NuevoPagoPage() {
             </div>
             <div className="flex justify-between">
               <span className="text-zinc-400">Cuota Sugerida:</span>
-              <span className="text-blue-400 font-bold">${selectedPrestamo.cuota_monto.toFixed(2)}</span>
+              <span className="text-blue-400 font-bold">${selectedPrestamo.valor_cuota.toFixed(2)}</span>
             </div>
-          </div>
-        )}
+            </div>
+            )}
+
 
         {/* Monto del Pago */}
         <section className="space-y-3">

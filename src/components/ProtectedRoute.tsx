@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
+import { AutoUpdater } from "./AutoUpdater";
 
 export default function ProtectedRoute({
   children,
@@ -14,11 +15,12 @@ export default function ProtectedRoute({
 
   useEffect(() => {
     const checkAuth = async () => {
+      // getUser() is more secure as it revalidates the session with the server
       const {
-        data: { session },
-      } = await supabase.auth.getSession();
+        data: { user },
+      } = await supabase.auth.getUser();
       
-      if (!session) {
+      if (!user) {
         router.replace("/login");
       } else {
         setLoading(false);
@@ -49,5 +51,10 @@ export default function ProtectedRoute({
     );
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <AutoUpdater />
+      {children}
+    </>
+  );
 }

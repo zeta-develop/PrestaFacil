@@ -4,22 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Search, UserPlus, Phone, MapPin, MoreVertical } from "lucide-react";
+import { Search, UserPlus, Phone } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-
-interface Cliente {
-  id: string;
-  nombre: string;
-  telefono: string;
-  direccion: string;
-  estado: "activo" | "inactivo";
-  prestamos?: {
-    id: string;
-    monto: number;
-    saldo_pendiente: number;
-    estado: string;
-  }[];
-}
+import { clienteService } from "@/services/databaseService";
 
 export default function ClientesPage() {
   const [search, setSearch] = useState("");
@@ -35,18 +22,7 @@ export default function ClientesPage() {
   const { data: clientes = [], isLoading: loading } = useQuery({
     queryKey: ["clientes", session?.id],
     enabled: !!session?.id,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("clientes")
-        .select(`
-          *,
-          prestamos ( id, monto, saldo_pendiente, estado )
-        `)
-        .eq("user_id", session!.id)
-        .order("nombre", { ascending: true });
-
-      return data as Cliente[];
-    },
+    queryFn: () => clienteService.getAll(session!.id),
   });
 
   const filteredClientes = clientes.filter((c) =>

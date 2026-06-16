@@ -21,7 +21,7 @@ export default function RegisterPage() {
     setSuccess(false);
 
     try {
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -38,8 +38,9 @@ export default function RegisterPage() {
       setTimeout(() => {
         router.push("/login");
       }, 3000);
-    } catch (err: any) {
-      setError(err.message || "Error al crear la cuenta. Intenta nuevamente.");
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Error al crear la cuenta. Intenta nuevamente.";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

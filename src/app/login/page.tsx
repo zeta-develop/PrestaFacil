@@ -18,7 +18,7 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -29,8 +29,9 @@ export default function LoginPage() {
       // For now, redirect to dashboard or home
       router.push("/");
       router.refresh();
-    } catch (err: any) {
-      setError(err.message || "Error al iniciar sesión. Verifica tus credenciales.");
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Error al iniciar sesión. Verifica tus credenciales.";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

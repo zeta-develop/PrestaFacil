@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
-import { ArrowLeft, Wallet, Calendar, Plus, ChevronRight, Activity, DollarSign } from "lucide-react";
+import { ArrowLeft, Wallet, Calendar, Plus, Activity, DollarSign } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -56,7 +56,7 @@ function PrestamoDetalleContent() {
     },
   });
 
-  const { data: prestamo, isLoading: loading, refetch } = useQuery({
+  const { data: prestamo, isLoading: loading } = useQuery({
     queryKey: ["prestamo", id],
     enabled: !!id && !!session?.id,
     queryFn: async () => {
@@ -74,7 +74,7 @@ function PrestamoDetalleContent() {
 
       // Sort payments by date descending
       if (data.pagos) {
-        data.pagos.sort((a: any, b: any) => new Date(b.fecha_pago).getTime() - new Date(a.fecha_pago).getTime());
+        data.pagos.sort((a: Pago, b: Pago) => new Date(b.fecha_pago).getTime() - new Date(a.fecha_pago).getTime());
       }
       return data as Prestamo;
     },

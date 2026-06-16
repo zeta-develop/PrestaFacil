@@ -3,21 +3,19 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
-import { LogOut, User, Settings, Shield, DollarSign, Moon, Sun } from "lucide-react";
+import { LogOut, Shield, DollarSign, Moon, Sun } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 
 export default function PerfilPage() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userInfo, setUserInfo] = useState<{ email: string; name: string } | null>(null);
   const [capital, setCapital] = useState("");
 
   useEffect(() => {
-    setMounted(true);
     const fetchProfile = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -156,23 +154,23 @@ export default function PerfilPage() {
               </div>
 
               {/* Tema de la app */}
-              <div className="rounded-3xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 p-5 shadow-lg dark:shadow-none backdrop-blur-md flex items-center justify-between transition-colors duration-300">
-                <div className="flex items-center gap-3 text-zinc-900 dark:text-white transition-colors duration-300">
-                  <div className="p-2 rounded-xl bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-400">
-                    {mounted && theme === "dark" ? <Moon size={20} /> : <Sun size={20} />}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 text-zinc-900 dark:text-white transition-colors duration-300">
+                    <div className="p-2 rounded-xl bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-400">
+                      {theme === "dark" ? <Moon size={20} /> : <Sun size={20} />}
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-sm">Tema Visual</h4>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">Cambiar a {theme === "dark" ? "Modo Claro" : "Modo Oscuro"}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-sm">Tema Visual</h4>
-                    <p className="text-xs text-zinc-500 dark:text-zinc-400">Cambiar a {mounted && theme === "dark" ? "Modo Claro" : "Modo Oscuro"}</p>
-                  </div>
+                  <button
+                    onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                    className="px-4 py-2 rounded-xl bg-zinc-100 dark:bg-white/10 hover:bg-zinc-200 dark:hover:bg-white/20 text-zinc-900 dark:text-white font-semibold text-sm transition-all active:scale-95"
+                  >
+                    Alternar
+                  </button>
                 </div>
-                <button
-                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                  className="px-4 py-2 rounded-xl bg-zinc-100 dark:bg-white/10 hover:bg-zinc-200 dark:hover:bg-white/20 text-zinc-900 dark:text-white font-semibold text-sm transition-all active:scale-95"
-                >
-                  Alternar
-                </button>
-              </div>
             </section>
 
             {/* Acciones */}

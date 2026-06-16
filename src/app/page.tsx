@@ -1,22 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Wallet, TrendingUp, ArrowUpRight, ArrowDownRight, Plus, RefreshCw, FileText, Receipt, BarChart3, Briefcase, Users, DollarSign, Map, User } from "lucide-react";
+import { Wallet, TrendingUp, ArrowUpRight, ArrowDownRight, Plus, RefreshCw, Receipt, BarChart3, Briefcase, Users, DollarSign, Map, User } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-
-interface CapitalConfig {
-  capital_disponible: number;
-  capital_en_calle: number;
-  ganancia_total: number;
-  total_prestado: number;
-}
+import { dashboardService } from "@/services/databaseService";
 
 export default function Home() {
-  const [greeting, setGreeting] = useState("");
-
   const { data: session } = useQuery({
     queryKey: ["session"],
     queryFn: async () => {
@@ -28,31 +19,17 @@ export default function Home() {
   const { data: config, isLoading: loading } = useQuery({
     queryKey: ["dashboardData", session?.id],
     enabled: !!session?.id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("capital_config")
-        .select("*")
-        .eq("user_id", session!.id)
-        .single();
-
-      if (error) {
-        return {
-          capital_disponible: 0,
-          capital_en_calle: 0,
-          ganancia_total: 0,
-          total_prestado: 0,
-        };
-      }
-      return data as CapitalConfig;
-    },
+    queryFn: () => dashboardService.getStats(session!.id),
   });
 
-  useEffect(() => {
+  const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) setGreeting("Buenos días");
-    else if (hour < 19) setGreeting("Buenas tardes");
-    else setGreeting("Buenas noches");
-  }, []);
+    if (hour < 12) return "Buenos días";
+    if (hour < 19) return "Buenas tardes";
+    return "Buenas noches";
+  };
+
+  const greeting = getGreeting();
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("es-MX", {
@@ -78,7 +55,7 @@ export default function Home() {
       <main className="flex-1 p-6 space-y-8 relative z-10">
         <header className="flex items-center justify-between pt-2">
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white tracking-tight">Hola, {fullName}</h1>
+            <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white tracking-tight">{greeting}, {fullName}</h1>
             <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Resumen de hoy</p>
           </div>
           <div className="h-12 w-12 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 shadow-[0_0_15px_rgba(45,212,191,0.3)] flex items-center justify-center text-white font-bold text-lg">
