@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Wallet, TrendingUp, ArrowUpRight, ArrowDownRight, Plus, RefreshCw, FileText } from "lucide-react";
+import { Wallet, TrendingUp, ArrowUpRight, ArrowDownRight, Plus, RefreshCw, FileText, Receipt, BarChart3, Briefcase, Users, DollarSign, Map, User } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 interface CapitalConfig {
@@ -129,9 +129,58 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Acciones Rápidas */}
+        {/* Accesos Rápidos */}
         <section className="space-y-4">
-          <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-widest pl-1">Acciones Rápidas</h3>
+          <div className="flex items-center justify-between pl-1">
+            <h3 className="text-sm font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Accesos Rápidos</h3>
+            <span className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em]">Rutas visibles</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Link href="/clientes" className="group flex flex-col items-center gap-3 rounded-3xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 py-5 active:scale-95 transition-all shadow-lg dark:shadow-none hover:bg-zinc-50 dark:hover:bg-white/10">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-violet-50 dark:bg-violet-500/10 text-violet-600 dark:text-violet-400 transition-all">
+                <Users size={24} />
+              </div>
+              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Clientes</span>
+            </Link>
+            <Link href="/prestamos" className="group flex flex-col items-center gap-3 rounded-3xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 py-5 active:scale-95 transition-all shadow-lg dark:shadow-none hover:bg-zinc-50 dark:hover:bg-white/10">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 transition-all">
+                <DollarSign size={24} />
+              </div>
+              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Préstamos</span>
+            </Link>
+            <Link href="/pagos" className="group flex flex-col items-center gap-3 rounded-3xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 py-5 active:scale-95 transition-all shadow-lg dark:shadow-none hover:bg-zinc-50 dark:hover:bg-white/10">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 transition-all">
+                <Receipt size={24} />
+              </div>
+              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Pagos</span>
+            </Link>
+            <Link href="/reportes" className="group flex flex-col items-center gap-3 rounded-3xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 py-5 active:scale-95 transition-all shadow-lg dark:shadow-none hover:bg-zinc-50 dark:hover:bg-white/10">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 transition-all">
+                <BarChart3 size={24} />
+              </div>
+              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Reportes</span>
+            </Link>
+            <Link href="/caja" className="group flex flex-col items-center gap-3 rounded-3xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 py-5 active:scale-95 transition-all shadow-lg dark:shadow-none hover:bg-zinc-50 dark:hover:bg-white/10">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 transition-all">
+                <Briefcase size={24} />
+              </div>
+              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Caja</span>
+            </Link>
+            <Link href="/rutas" className="group flex flex-col items-center gap-3 rounded-3xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 py-5 active:scale-95 transition-all shadow-lg dark:shadow-none hover:bg-zinc-50 dark:hover:bg-white/10">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400 transition-all">
+                <Map size={24} />
+              </div>
+              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Rutas</span>
+            </Link>
+            <Link href="/perfil" className="group flex flex-col items-center gap-3 rounded-3xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 py-5 active:scale-95 transition-all shadow-lg dark:shadow-none hover:bg-zinc-50 dark:hover:bg-white/10">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-300 transition-all">
+                <User size={24} />
+              </div>
+              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Perfil</span>
+            </Link>
+          </div>
+
           <div className="grid grid-cols-3 gap-3">
             <Link href="/prestamos/nuevo" className="group flex flex-col items-center gap-3 rounded-3xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 py-5 active:scale-95 transition-all shadow-lg dark:shadow-none hover:bg-zinc-50 dark:hover:bg-white/10">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 group-hover:shadow-[0_0_15px_rgba(0,0,0,0.2)] dark:group-hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] transition-all">
@@ -145,12 +194,12 @@ export default function Home() {
               </div>
               <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Pago</span>
             </Link>
-            <button className="group flex flex-col items-center gap-3 rounded-3xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 py-5 active:scale-95 transition-all shadow-lg dark:shadow-none hover:bg-zinc-50 dark:hover:bg-white/10">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 transition-all">
-                <FileText size={24} />
+            <Link href="/caja" className="group flex flex-col items-center gap-3 rounded-3xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 py-5 active:scale-95 transition-all shadow-lg dark:shadow-none hover:bg-zinc-50 dark:hover:bg-white/10">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 transition-all">
+                <Briefcase size={24} />
               </div>
-              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Reporte</span>
-            </button>
+              <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">Caja</span>
+            </Link>
           </div>
         </section>
 
