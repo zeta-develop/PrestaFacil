@@ -19,9 +19,15 @@ export interface Prestamo {
   cliente_id: string;
   monto: number;
   interes: number;
-  plazo: number; // en días o semanas según lógica
+  plazo: number;
   fecha_inicio: string;
   saldo_pendiente: number;
+  valor_cuota: number;
+  numero_cuotas: number;
+  cuotas_pagadas: number;
+  total_a_pagar: number;
+  capital_recuperado: number;
+  interes_ganado: number;
   estado: PrestamoEstado;
   created_at?: string;
   clientes?: Cliente;
