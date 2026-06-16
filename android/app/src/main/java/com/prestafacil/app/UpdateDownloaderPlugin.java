@@ -51,12 +51,12 @@ public class UpdateDownloaderPlugin extends Plugin {
                 int totalSize = connection.getContentLength();
                 if (totalSize <= 0) totalSize = -1;
 
+                long downloaded = 0;
                 try (InputStream inputStream = connection.getInputStream();
                      FileOutputStream outputStream = new FileOutputStream(outputFile)) {
 
                     byte[] buffer = new byte[8192];
                     int bytesRead;
-                    long downloaded = 0;
                     int lastProgress = 0;
 
                     while ((bytesRead = inputStream.read(buffer)) != -1) {
