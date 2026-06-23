@@ -153,3 +153,52 @@ jobs:
           name: "PrestaFácil v${{ env.APP_VERSION }}"
           draft: false
           prerelease: false
+
+      # 1️⃣6️⃣ Clean older releases and tags, keeping only the 2 most recent ones
+      - name: Clean older releases
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const response = await github.rest.repos.listReleases({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100,
+            });
+            const releases = response.data;
+            // Ordenar de más reciente a más antigua
+            releases.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            
+            console.log(`Releases encontradas: ${releases.length}`);
+            
+            if (releases.length > 2) {
+              const releasesToDelete = releases.slice(2);
+              for (const release of releasesToDelete) {
+                console.log(`Borrando release obsoleta: ${release.name} (Tag: ${release.tag_name})`);
+                try {
+                  // Borrar release
+                  await github.rest.repos.deleteRelease({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    release_id: release.id,
+                  });
+                  console.log(`Release borrada con éxito.`);
+                } catch (err) {
+                  console.error(`Error al borrar release:`, err.message);
+                }
+                
+                try {
+                  // Borrar tag asociado en git
+                  await github.rest.git.deleteRef({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    ref: `tags/${release.tag_name}`,
+                  });
+                  console.log(`Tag ref/${release.tag_name} borrado con éxito.`);
+                } catch (err) {
+                  console.error(`Error al borrar tag ref:`, err.message);
+                }
+              }
+            } else {
+              console.log("No hay releases sobrantes que limpiar.");
+            }

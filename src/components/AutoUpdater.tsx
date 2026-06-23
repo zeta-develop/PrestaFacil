@@ -5,6 +5,7 @@ import { App } from "@capacitor/app";
 import { Dialog } from "@capacitor/dialog";
 import { Capacitor } from "@capacitor/core";
 import { UpdateInstaller, type DownloadProgressEvent } from "@/plugins/updateInstaller";
+import { Download, RefreshCw, AlertCircle, CheckCircle } from "lucide-react";
 
 interface GitHubAsset {
   name: string;
@@ -15,6 +16,7 @@ interface GitHubRelease {
   name: string;
   tag_name: string;
   assets: GitHubAsset[];
+  body?: string;
 }
 
 export function AutoUpdater() {
@@ -23,6 +25,7 @@ export function AutoUpdater() {
 
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
+  const [downloadStatus, setDownloadStatus] = useState<"downloading" | "completed" | "error" | "preparing">("preparing");
   const [downloadMessage, setDownloadMessage] = useState("Preparando descarga...");
   const [releaseName, setReleaseName] = useState("");
 
@@ -34,11 +37,8 @@ export function AutoUpdater() {
       // 1. Validar que estamos en Android
       if (!Capacitor.isNativePlatform()) return;
 
-      const repo = process.env.NEXT_PUBLIC_GITHUB_REPO;
-      if (!repo) {
-        console.warn("AutoUpdater: NEXT_PUBLIC_GITHUB_REPO no está definido en las variables de entorno.");
-        return;
-      }
+      // El repositorio está hardcoded, evitando depender del archivo .env
+      const repo = "zeta-develop/PrestaFacil";
 
       try {
         // 2. Obtener la versión local instalada
@@ -59,7 +59,7 @@ export function AutoUpdater() {
         }
         const release: GitHubRelease = await res.json();
 
-        // El tag tiene formato v0.1.0-45 o simplemente v0.1.0
+        // El tag tiene formato vX.Y.Z-BUILD (ej. v0.1.2-8)
         const parts = release.tag_name.split("-");
         let cloudBuild = NaN;
 
@@ -93,30 +93,33 @@ export function AutoUpdater() {
 
           setReleaseName(release.name || release.tag_name || "Nueva actualización");
           setDownloadProgress(0);
+          setDownloadStatus("preparing");
           setDownloadMessage("Iniciando descarga...");
           setShowProgressModal(true);
 
           progressListener.current = await UpdateInstaller.addListener(
             "downloadProgress",
             (event: DownloadProgressEvent) => {
-              const progress = typeof event.percent === "number" ? event.percent : 0;
+              const progressVal = typeof event.percent === "number" ? event.percent : 0;
               
-              if (progress >= 0) {
-                setDownloadProgress(progress);
+              if (progressVal >= 0) {
+                setDownloadProgress(progressVal);
               }
 
               if (event.status === "downloading") {
+                setDownloadStatus("downloading");
                 setDownloadMessage("Descargando actualización...");
               }
 
               if (event.status === "finished") {
+                setDownloadStatus("completed");
                 setDownloadProgress(100);
-                setDownloadMessage("Abriendo instalador...");
+                setDownloadMessage("Abriendo instalador nativo...");
               }
 
               if (event.status === "error") {
+                setDownloadStatus("error");
                 setDownloadMessage(event.message || "No se pudo descargar la actualización.");
-                setTimeout(() => setShowProgressModal(false), 5000);
               }
             }
           );
@@ -128,20 +131,21 @@ export function AutoUpdater() {
             });
 
             if (result.success) {
+              setDownloadStatus("completed");
               setDownloadProgress(100);
               setDownloadMessage("Instalador abierto. Finaliza la instalación para continuar.");
             }
           } catch (err) {
+            setDownloadStatus("error");
             const errorMessage = err instanceof Error ? err.message : "No se pudo iniciar la instalación";
             console.error("AutoUpdater: Error en downloadAndInstall", err);
             setDownloadMessage(`Error: ${errorMessage}`);
-            setTimeout(() => setShowProgressModal(false), 5000);
           } finally {
             if (progressListener.current) {
               await progressListener.current.remove();
               progressListener.current = null;
             }
-            // No cerramos el modal inmediatamente para que el usuario vea el mensaje final
+            // Mantenemos el modal abierto un breve momento tras completado o con error
             setTimeout(() => setShowProgressModal(false), 8000);
           }
         }
@@ -162,25 +166,59 @@ export function AutoUpdater() {
   return (
     <>
       {showProgressModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-zinc-950 p-6 shadow-2xl">
-            <div className="mb-4 space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-400">Actualización en progreso</p>
-              <h2 className="text-lg font-bold text-white">{releaseName}</h2>
-              <p className="text-sm text-zinc-400">{downloadMessage}</p>
-            </div>
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-zinc-900 border border-zinc-800 w-full max-w-sm rounded-[2.5rem] p-6 shadow-[0_0_50px_rgba(0,0,0,0.8)] relative overflow-hidden text-center text-white animate-in zoom-in-95 duration-300">
+            
+            {/* Decorative ambient light */}
+            <div className="absolute -top-12 -right-12 w-32 h-32 bg-teal-500/20 blur-[60px] rounded-full pointer-events-none"></div>
+            
+            <div className="space-y-6 relative z-10 py-2">
+              
+              {/* Dinamic icon based on download status */}
+              {downloadStatus === "preparing" && (
+                <div className="mx-auto h-16 w-16 rounded-3xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400">
+                  <Download size={32} className="animate-bounce" />
+                </div>
+              )}
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-zinc-400">
-                <span>Descarga</span>
-                <span>{Math.round(downloadProgress)}%</span>
+              {downloadStatus === "downloading" && (
+                <div className="mx-auto h-16 w-16 rounded-3xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400">
+                  <RefreshCw size={32} className="animate-spin" />
+                </div>
+              )}
+
+              {downloadStatus === "completed" && (
+                <div className="mx-auto h-16 w-16 rounded-3xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.2)] animate-pulse">
+                  <CheckCircle size={32} />
+                </div>
+              )}
+
+              {downloadStatus === "error" && (
+                <div className="mx-auto h-16 w-16 rounded-3xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 shadow-[0_0_20px_rgba(239,68,68,0.2)]">
+                  <AlertCircle size={32} />
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-teal-400 uppercase tracking-widest bg-teal-500/10 px-3 py-1 rounded-full">Actualización en Progreso</span>
+                <h2 className="text-xl font-bold text-white tracking-tight pt-2">{releaseName}</h2>
+                <p className="text-sm text-zinc-400 pt-1">{downloadMessage}</p>
               </div>
-              <div className="h-3 overflow-hidden rounded-full bg-white/10">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 transition-all duration-300"
-                  style={{ width: `${Math.min(downloadProgress, 100)}%` }}
-                />
+
+              {/* Progress bar container */}
+              <div className="space-y-2">
+                <div className="h-3 w-full bg-black/40 border border-zinc-800 rounded-full overflow-hidden p-0.5">
+                  <div 
+                    className="h-full bg-gradient-to-r from-teal-500 to-emerald-400 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(20,184,166,0.5)]"
+                    style={{ width: `${Math.min(downloadProgress, 100)}%` }}
+                  ></div>
+                </div>
+                <div className="flex items-center justify-between text-xs text-zinc-500 font-bold px-1">
+                  <span>Descarga</span>
+                  <span className="text-base text-teal-400 font-black">{Math.round(downloadProgress)}%</span>
+                </div>
               </div>
+
             </div>
           </div>
         </div>
