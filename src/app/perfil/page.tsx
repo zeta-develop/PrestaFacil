@@ -6,6 +6,8 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { LogOut, Shield, DollarSign, Moon, Sun } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
+import { App } from "@capacitor/app";
+import { Capacitor } from "@capacitor/core";
 
 export default function PerfilPage() {
   const router = useRouter();
@@ -14,6 +16,21 @@ export default function PerfilPage() {
   const [saving, setSaving] = useState(false);
   const [userInfo, setUserInfo] = useState<{ email: string; name: string } | null>(null);
   const [capital, setCapital] = useState("");
+  const [appVersion, setAppVersion] = useState("0.2.0");
+
+  useEffect(() => {
+    const getVersion = async () => {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const info = await App.getInfo();
+          setAppVersion(`${info.version} (Build ${info.build})`);
+        } catch (err) {
+          console.error("Error obteniendo versión de app:", err);
+        }
+      }
+    };
+    getVersion();
+  }, []);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -174,7 +191,7 @@ export default function PerfilPage() {
             </section>
 
             {/* Acciones */}
-            <section className="pt-4">
+            <section className="pt-4 space-y-6">
               <button
                 onClick={handleSignOut}
                 className="w-full flex items-center justify-center gap-2 py-4 px-4 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 text-red-600 dark:text-red-500 font-semibold rounded-2xl border border-red-200 dark:border-red-500/20 transition-all active:scale-[0.98]"
@@ -182,6 +199,10 @@ export default function PerfilPage() {
                 <LogOut size={20} />
                 Cerrar Sesión
               </button>
+
+              <div className="text-center pt-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
+                PrestaFácil v{appVersion}
+              </div>
             </section>
           </>
         )}
