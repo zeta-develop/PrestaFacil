@@ -501,7 +501,8 @@ _Generado automáticamente desde PrestaFácil_`;
           cuotas_pagadas: nuevasCuotasPagadas,
           capital_recuperado: nuevoCapitalRecuperado,
           interes_ganado: nuevoInteresGanado,
-          estado: nuevoEstado
+          estado: nuevoEstado,
+          updated_at: new Date().toISOString()
         })
         .eq("id", prestamo.id);
 

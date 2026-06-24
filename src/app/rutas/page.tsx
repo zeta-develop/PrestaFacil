@@ -56,6 +56,9 @@ export default function RutasInteligentesPage() {
     queryKey: ["rutasDiarias"],
     enabled: !!session?.id,
     queryFn: async () => {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+
       const { data, error } = await supabase
         .from("prestamos")
         .select(`
@@ -63,7 +66,7 @@ export default function RutasInteligentesPage() {
           clientes (*),
           pagos (*)
         `)
-        .eq("estado", "activo");
+        .or(`estado.eq.activo,and(estado.eq.pagado,updated_at.gte.${todayStart.toISOString()})`);
 
       if (error) throw error;
       return data as unknown as Prestamo[];
@@ -163,7 +166,8 @@ export default function RutasInteligentesPage() {
           cuotas_pagadas: nuevasCuotasPagadas,
           capital_recuperado: nuevoCapitalRecuperado,
           interes_ganado: nuevoInteresGanado,
-          estado: nuevoEstado
+          estado: nuevoEstado,
+          updated_at: new Date().toISOString()
         })
         .eq("id", selectedPrestamo.id);
 
