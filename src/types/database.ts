@@ -46,9 +46,15 @@ export interface Pago {
 export interface CapitalConfig {
   id: string;
   user_id: string;
+  capital_inicial: number;
   capital_disponible: number;
   capital_en_calle: number;
   ganancia_total: number;
   total_prestado: number;
+  total_recuperado: number;
+  dia_corte_kpi: number;
+  last_cierre_kpi?: string | null;
+  created_at?: string;
   updated_at?: string;
 }
+

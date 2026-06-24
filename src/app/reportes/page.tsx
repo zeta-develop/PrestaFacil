@@ -45,6 +45,23 @@ export default function ReportesPage() {
     },
   });
 
+  const { data: config } = useQuery({
+    queryKey: ["capital-config-reportes", session?.id],
+    enabled: !!session?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("capital_config")
+        .select("dia_corte_kpi")
+        .eq("user_id", session!.id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const diaCorte = config?.dia_corte_kpi || 1;
+
   const { data: pagos = [], isLoading: loading } = useQuery({
     queryKey: ["pagos-reportes", session?.id],
     enabled: !!session?.id,
@@ -60,14 +77,26 @@ export default function ReportesPage() {
     },
   });
 
-  // Calcular datos mensuales
+  // Calcular datos mensuales respetando la fecha de corte
   const datosMenuales = useMemo(() => {
     const meses: { [key: string]: MonthlyData } = {};
 
     pagos.forEach((pago) => {
       const fecha = new Date(pago.fecha_pago);
-      const mes = fecha.getMonth();
-      const anio = fecha.getFullYear();
+      
+      // Determinar mes y año según el día de corte
+      const dia = fecha.getDate();
+      let mes = fecha.getMonth();
+      let anio = fecha.getFullYear();
+
+      if (dia >= diaCorte) {
+        mes += 1;
+        if (mes > 11) {
+          mes = 0;
+          anio += 1;
+        }
+      }
+
       const clave = `${anio}-${mes}`;
 
       if (!meses[clave]) {
@@ -92,7 +121,7 @@ export default function ReportesPage() {
       if (a.año !== b.año) return a.año - b.año;
       return a.mesNumero - b.mesNumero;
     });
-  }, [pagos]);
+  }, [pagos, diaCorte]);
 
   // Datos del mes seleccionado
   const mesActual = datosMenuales.find(
@@ -115,11 +144,11 @@ export default function ReportesPage() {
   }, [datosAnioActual]);
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-MX", {
+    return new Intl.NumberFormat("es-NI", {
       style: "currency",
-      currency: "MXN",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      currency: "NIO",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount);
   };
 
@@ -228,24 +257,24 @@ export default function ReportesPage() {
           ) : mesActual ? (
             <div className="space-y-4 p-4 rounded-2xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 shadow-sm dark:shadow-none">
               {/* KPIs del Mes */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="text-center">
-                  <div className="text-xs text-zinc-600 dark:text-zinc-400 mb-1 uppercase font-medium">Recuperado</div>
-                  <div className="text-lg font-bold text-teal-600 dark:text-teal-400">
+              <div className="grid grid-cols-1 xs:grid-cols-3 gap-2.5">
+                <div className="flex xs:flex-col justify-between xs:justify-center items-center p-3 xs:py-4 bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-white/5 rounded-2xl text-center transition-colors">
+                  <span className="text-[10px] xs:text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider xs:mb-1">Recuperado</span>
+                  <span className="text-sm xs:text-base font-black text-teal-600 dark:text-teal-400 truncate max-w-[150px] xs:max-w-none">
                     {formatCurrency(mesActual.totalRecuperado)}
-                  </div>
+                  </span>
                 </div>
-                <div className="text-center">
-                  <div className="text-xs text-zinc-600 dark:text-zinc-400 mb-1 uppercase font-medium">Capital</div>
-                  <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                <div className="flex xs:flex-col justify-between xs:justify-center items-center p-3 xs:py-4 bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-white/5 rounded-2xl text-center transition-colors">
+                  <span className="text-[10px] xs:text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider xs:mb-1">Capital</span>
+                  <span className="text-sm xs:text-base font-black text-emerald-600 dark:text-emerald-400 truncate max-w-[150px] xs:max-w-none">
                     {formatCurrency(mesActual.capitalAbonado)}
-                  </div>
+                  </span>
                 </div>
-                <div className="text-center">
-                  <div className="text-xs text-zinc-600 dark:text-zinc-400 mb-1 uppercase font-medium">Interés</div>
-                  <div className="text-lg font-bold text-orange-600 dark:text-orange-400">
+                <div className="flex xs:flex-col justify-between xs:justify-center items-center p-3 xs:py-4 bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-white/5 rounded-2xl text-center transition-colors">
+                  <span className="text-[10px] xs:text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider xs:mb-1">Interés</span>
+                  <span className="text-sm xs:text-base font-black text-orange-600 dark:text-orange-400 truncate max-w-[150px] xs:max-w-none">
                     {formatCurrency(mesActual.interesPagado)}
-                  </div>
+                  </span>
                 </div>
               </div>
 

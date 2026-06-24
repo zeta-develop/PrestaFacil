@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import { ArrowLeft, Phone, MapPin, DollarSign, Activity } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { clienteService } from "@/services/databaseService";
 import { Cliente } from "@/types/database";
 
@@ -12,38 +13,30 @@ function ClienteDetalleContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
-  const [cliente, setCliente] = useState<Cliente | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchCliente = async () => {
-      if (!id) return;
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+  const { data: session } = useQuery({
+    queryKey: ["session"],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      return user;
+    },
+  });
 
-        const data = await clienteService.getById(id, user.id);
-
-        if (data) {
-          // Sort prestamos by date descending
-          if (data.prestamos) {
-            data.prestamos.sort((a, b) => {
-              const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-              const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-              return dateB - dateA;
-            });
-          }
-          setCliente(data);
-        }
-      } catch (error) {
-        console.error("Error fetching cliente:", error);
-      } finally {
-        setLoading(false);
+  const { data: cliente, isLoading: loading } = useQuery({
+    queryKey: ["cliente", id, session?.id],
+    enabled: !!id && !!session?.id,
+    queryFn: async () => {
+      const data = await clienteService.getById(id!, session!.id);
+      if (data && data.prestamos) {
+        data.prestamos.sort((a, b) => {
+          const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return dateB - dateA;
+        });
       }
-    };
-
-    fetchCliente();
-  }, [id]);
+      return data;
+    }
+  });
 
   if (loading) {
     return (
@@ -69,13 +62,21 @@ function ClienteDetalleContent() {
   return (
     <main className="flex-1 p-6 relative z-10 space-y-8 pb-24">
       {/* Header */}
-      <header className="flex items-center gap-4 pt-2">
-        <button onClick={() => router.back()} className="h-10 w-10 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white transition-colors active:scale-95">
-          <ArrowLeft size={20} />
-        </button>
-        <div>
-          <h1 className="text-xl font-bold text-white tracking-tight">Perfil del Cliente</h1>
+      <header className="flex items-center justify-between pt-2">
+        <div className="flex items-center gap-4">
+          <button onClick={() => router.back()} className="h-10 w-10 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white transition-colors active:scale-95">
+            <ArrowLeft size={20} />
+          </button>
+          <div>
+            <h1 className="text-xl font-bold text-white tracking-tight">Perfil del Cliente</h1>
+          </div>
         </div>
+        <Link 
+          href={`/clientes/editar?id=${id}`}
+          className="px-4 py-2 text-xs font-bold text-teal-400 bg-teal-500/10 border border-teal-500/20 hover:bg-teal-500/20 rounded-xl transition-all active:scale-95 shadow-[0_0_15px_rgba(20,184,166,0.1)]"
+        >
+          Editar
+        </Link>
       </header>
 
       {/* Info Card */}

@@ -32,9 +32,11 @@ export default function Home() {
   const greeting = getGreeting();
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-MX", {
+    return new Intl.NumberFormat("es-NI", {
       style: "currency",
-      currency: "MXN",
+      currency: "NIO",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount);
   };
 
@@ -85,23 +87,41 @@ export default function Home() {
         </section>
 
         {/* KPIs Secundarios */}
-        <section className="grid grid-cols-2 gap-4">
-          <div className="rounded-[2rem] bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 p-5 shadow-lg dark:shadow-none transition-colors duration-300">
-            <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 mb-3">
+        <section className="grid grid-cols-2 gap-3.5">
+          <div className="rounded-3xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 p-4 xs:p-5 shadow-lg dark:shadow-none transition-colors duration-300 relative overflow-hidden">
+            <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 mb-2.5">
               <TrendingUp size={16} />
               <span className="text-xs font-bold uppercase tracking-wider">En Calle</span>
             </div>
-            <span className="text-2xl font-bold text-zinc-900 dark:text-white transition-colors duration-300">
+            <span className="text-lg xs:text-xl sm:text-2xl font-black text-zinc-900 dark:text-white transition-colors duration-300 block truncate">
               {formatCurrency(config?.capital_en_calle || 0)}
             </span>
           </div>
-          <div className="rounded-[2rem] bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 p-5 shadow-lg dark:shadow-none transition-colors duration-300">
-            <div className="flex items-center gap-2 text-orange-500 dark:text-orange-400 mb-3">
-              <ArrowDownRight size={16} />
+          <div className="rounded-3xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 p-4 xs:p-5 shadow-lg dark:shadow-none transition-colors duration-300 relative overflow-hidden">
+            <div className="flex items-center gap-2 text-orange-500 dark:text-orange-400 mb-2.5">
+              <ArrowUpRight size={16} />
               <span className="text-xs font-bold uppercase tracking-wider">Ganancia</span>
             </div>
-            <span className="text-2xl font-bold text-zinc-900 dark:text-white transition-colors duration-300">
+            <span className="text-lg xs:text-xl sm:text-2xl font-black text-zinc-900 dark:text-white transition-colors duration-300 block truncate">
               {formatCurrency(config?.ganancia_total || 0)}
+            </span>
+          </div>
+          <div className="rounded-3xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 p-4 xs:p-5 shadow-lg dark:shadow-none transition-colors duration-300 relative overflow-hidden">
+            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 mb-2.5">
+              <ArrowDownRight size={16} />
+              <span className="text-xs font-bold uppercase tracking-wider">Recuperado</span>
+            </div>
+            <span className="text-lg xs:text-xl sm:text-2xl font-black text-zinc-900 dark:text-white transition-colors duration-300 block truncate">
+              {formatCurrency((config?.total_recuperado || 0) + (config?.ganancia_total || 0))}
+            </span>
+          </div>
+          <div className="rounded-3xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 p-4 xs:p-5 shadow-lg dark:shadow-none transition-colors duration-300 relative overflow-hidden">
+            <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400 mb-2.5">
+              <Plus size={16} />
+              <span className="text-xs font-bold uppercase tracking-wider">Prestado</span>
+            </div>
+            <span className="text-lg xs:text-xl sm:text-2xl font-black text-zinc-900 dark:text-white transition-colors duration-300 block truncate">
+              {formatCurrency(config?.total_prestado || 0)}
             </span>
           </div>
         </section>

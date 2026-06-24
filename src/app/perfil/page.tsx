@@ -16,6 +16,7 @@ export default function PerfilPage() {
   const [saving, setSaving] = useState(false);
   const [userInfo, setUserInfo] = useState<{ email: string; name: string } | null>(null);
   const [capital, setCapital] = useState("");
+  const [diaCorte, setDiaCorte] = useState("1");
   const [appVersion, setAppVersion] = useState("0.2.0");
 
   useEffect(() => {
@@ -45,12 +46,13 @@ export default function PerfilPage() {
 
         const { data } = await supabase
           .from("capital_config")
-          .select("capital_inicial")
+          .select("capital_inicial, dia_corte_kpi")
           .eq("user_id", user.id)
           .single();
 
         if (data) {
           setCapital(String(data.capital_inicial ?? 0));
+          setDiaCorte(String(data.dia_corte_kpi ?? 1));
         }
       } catch (error) {
         console.error("Error fetching profile:", error);
@@ -74,6 +76,13 @@ export default function PerfilPage() {
       if (!user) return;
 
       const numCapital = parseFloat(capital) || 0;
+      const numDiaCorte = parseInt(diaCorte) || 1;
+
+      if (numDiaCorte < 1 || numDiaCorte > 28) {
+        alert("El día de corte debe estar entre 1 y 28");
+        setSaving(false);
+        return;
+      }
 
       // Upsert logic (checking if exists first)
       const { data: existing } = await supabase
@@ -85,7 +94,10 @@ export default function PerfilPage() {
       if (existing) {
         await supabase
           .from("capital_config")
-          .update({ capital_inicial: numCapital })
+          .update({ 
+            capital_inicial: numCapital,
+            dia_corte_kpi: numDiaCorte
+          })
           .eq("id", existing.id);
       } else {
         await supabase
@@ -94,11 +106,11 @@ export default function PerfilPage() {
             user_id: user.id,
             capital_inicial: numCapital,
             capital_disponible: numCapital,
-            dia_corte_kpi: 1
+            dia_corte_kpi: numDiaCorte
           });
       }
       
-      alert("Capital actualizado con éxito");
+      alert("Configuración actualizada con éxito");
     } catch (error) {
       console.error("Error saving capital:", error);
       alert("Hubo un error al guardar");
@@ -146,26 +158,43 @@ export default function PerfilPage() {
                       <DollarSign size={20} />
                     </div>
                     <div>
-                      <h4 className="font-semibold text-sm">Capital Inicial</h4>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400">Ajusta la base de tu negocio</p>
+                      <h4 className="font-semibold text-sm">Finanzas y KPIs</h4>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">Ajusta la base y el día de corte de tu negocio</p>
                     </div>
                   </div>
                 </div>
-                
-                <div className="flex flex-col gap-3">
-                  <input
-                    type="number"
-                    value={capital}
-                    onChange={(e) => setCapital(e.target.value)}
-                    placeholder="Ej. 10000"
-                    className="w-full px-4 py-3.5 bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none text-zinc-900 dark:text-white transition-all backdrop-blur-sm"
-                  />
+                 
+                <div className="flex flex-col gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest pl-1">Capital Inicial</label>
+                    <input
+                      type="number"
+                      value={capital}
+                      onChange={(e) => setCapital(e.target.value)}
+                      placeholder="Ej. 18000"
+                      className="w-full px-4 py-3.5 bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none text-zinc-900 dark:text-white transition-all backdrop-blur-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest pl-1">Día de Corte Mensual (1 al 28)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="28"
+                      value={diaCorte}
+                      onChange={(e) => setDiaCorte(e.target.value)}
+                      placeholder="Ej. 23"
+                      className="w-full px-4 py-3.5 bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none text-zinc-900 dark:text-white transition-all backdrop-blur-sm"
+                    />
+                  </div>
+
                   <button 
                     onClick={handleSaveCapital}
                     disabled={saving}
-                    className="w-full py-3.5 rounded-2xl bg-teal-500 hover:bg-teal-600 text-white dark:text-zinc-950 font-bold transition-all disabled:opacity-50 shadow-[0_0_15px_rgba(20,184,166,0.3)] active:scale-[0.98]"
+                    className="w-full py-3.5 mt-2 rounded-2xl bg-teal-500 hover:bg-teal-600 text-white dark:text-zinc-950 font-bold transition-all disabled:opacity-50 shadow-[0_0_15px_rgba(20,184,166,0.3)] active:scale-[0.98]"
                   >
-                    {saving ? "Guardando..." : "Actualizar Capital"}
+                    {saving ? "Guardando..." : "Actualizar Configuración"}
                   </button>
                 </div>
               </div>

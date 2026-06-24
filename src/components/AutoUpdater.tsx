@@ -19,6 +19,37 @@ interface GitHubRelease {
   body?: string;
 }
 
+function isAppVersionNewer(localVersion: string, cloudVersion: string): boolean {
+  const cleanLocal = localVersion.replace(/^v/, "").trim();
+  const cleanCloud = cloudVersion.replace(/^v/, "").trim();
+
+  const [localVerPart, localBuildPart] = cleanLocal.split("-");
+  const [cloudVerPart, cloudBuildPart] = cleanCloud.split("-");
+
+  const localNums = localVerPart.split(".").map(n => parseInt(n, 10) || 0);
+  const cloudNums = cloudVerPart.split(".").map(n => parseInt(n, 10) || 0);
+
+  const maxLength = Math.max(localNums.length, cloudNums.length);
+  for (let i = 0; i < maxLength; i++) {
+    const localNum = localNums[i] || 0;
+    const cloudNum = cloudNums[i] || 0;
+    if (cloudNum > localNum) return true;
+    if (cloudNum < localNum) return false;
+  }
+
+  if (cloudBuildPart && localBuildPart) {
+    const localBuild = parseInt(localBuildPart, 10) || 0;
+    const cloudBuild = parseInt(cloudBuildPart, 10) || 0;
+    return cloudBuild > localBuild;
+  }
+
+  if (cloudBuildPart && !localBuildPart) {
+    return true;
+  }
+
+  return false;
+}
+
 export function AutoUpdater() {
   const hasChecked = useRef(false);
   const progressListener = useRef<{ remove: () => Promise<void> } | null>(null);
@@ -34,22 +65,14 @@ export function AutoUpdater() {
     hasChecked.current = true;
 
     const checkForUpdates = async () => {
-      // 1. Validar que estamos en Android
       if (!Capacitor.isNativePlatform()) return;
 
-      // El repositorio está hardcoded, evitando depender del archivo .env
       const repo = "zeta-develop/PrestaFacil";
 
       try {
-        // 2. Obtener la versión local instalada
         const info = await App.getInfo();
-        const localBuild = parseInt(info.build, 10);
-        if (isNaN(localBuild)) {
-          console.warn("AutoUpdater: No se pudo determinar el build local.", info.build);
-          return;
-        }
+        const localFullVersion = `${info.version}-${info.build}`;
 
-        // 3. Consultar GitHub Releases
         const res = await fetch(`https://api.github.com/repos/${repo}/releases/latest`, {
           headers: { "Accept": "application/vnd.github.v3+json" }
         });
@@ -59,22 +82,9 @@ export function AutoUpdater() {
         }
         const release: GitHubRelease = await res.json();
 
-        // El tag tiene formato vX.Y.Z-BUILD (ej. v0.1.2-8)
-        const parts = release.tag_name.split("-");
-        let cloudBuild = NaN;
+        const hasUpdate = isAppVersionNewer(localFullVersion, release.tag_name);
 
-        if (parts.length >= 2) {
-          cloudBuild = parseInt(parts[parts.length - 1], 10);
-        } else {
-          console.warn("AutoUpdater: El tag no sigue el formato vX.Y.Z-BUILD", release.tag_name);
-          return;
-        }
-
-        if (isNaN(cloudBuild)) return;
-
-        // 4. Comparar versiones
-        if (cloudBuild > localBuild) {
-          // Buscar el archivo APK en los assets del release
+        if (hasUpdate) {
           const apkAsset = release.assets?.find((asset) => asset.name.endsWith(".apk"));
           if (!apkAsset) {
             console.warn("AutoUpdater: No se encontró un asset APK en el release.");

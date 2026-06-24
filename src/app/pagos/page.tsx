@@ -88,11 +88,11 @@ export default function PagosPage() {
   }, [pagos, search, fechaInicio, fechaFin]);
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-MX", {
+    return new Intl.NumberFormat("es-NI", {
       style: "currency",
-      currency: "MXN",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
+      currency: "NIO",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount);
   };
 
