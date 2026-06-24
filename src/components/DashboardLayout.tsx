@@ -19,60 +19,85 @@ export default function DashboardLayout({
   const startY = useRef(0);
   const currentY = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const isDraggingRef = useRef(false);
+  const pullDistanceRef = useRef(0);
+  const refreshingRef = useRef(false);
   
-  const PULL_THRESHOLD = 70; // Distancia mínima para activar el refresh
-  const MAX_PULL = 100; // Distancia máxima visible del indicador
+  const PULL_THRESHOLD = 70;
+  const MAX_PULL = 100;
+
+  useEffect(() => {
+    isDraggingRef.current = isDragging;
+  }, [isDragging]);
+
+  useEffect(() => {
+    pullDistanceRef.current = pullDistance;
+  }, [pullDistance]);
+
+  useEffect(() => {
+    refreshingRef.current = refreshing;
+  }, [refreshing]);
 
   useEffect(() => {
     const handleTouchStart = (e: TouchEvent) => {
-      // Solo iniciar el arrastre si estamos en el tope superior del scroll
-      if (window.scrollY === 0 && !refreshing) {
+      const scrollTop = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop;
+      if (scrollTop === 0 && !refreshingRef.current) {
         startY.current = e.touches[0].pageY;
         setIsDragging(true);
+        isDraggingRef.current = true;
       }
     };
 
     const handleTouchMove = (e: TouchEvent) => {
-      if (!isDragging || refreshing) return;
+      if (!isDraggingRef.current || refreshingRef.current) return;
       
       currentY.current = e.touches[0].pageY;
       const diff = currentY.current - startY.current;
       
       if (diff > 0) {
-        // Lógica de resistencia táctil (atenuación logarítmica)
         const resistanceDiff = Math.min(diff * 0.45, MAX_PULL);
         setPullDistance(resistanceDiff);
+        pullDistanceRef.current = resistanceDiff;
         
-        // Prevenir el scroll nativo/rebote si estamos arrastrando hacia abajo
         if (e.cancelable) {
           e.preventDefault();
         }
       } else {
         setPullDistance(0);
+        pullDistanceRef.current = 0;
         setIsDragging(false);
+        isDraggingRef.current = false;
       }
     };
 
     const handleTouchEnd = async () => {
-      if (!isDragging || refreshing) return;
+      if (!isDraggingRef.current || refreshingRef.current) return;
       
       setIsDragging(false);
+      isDraggingRef.current = false;
       
-      if (pullDistance >= PULL_THRESHOLD) {
+      const currentPull = pullDistanceRef.current;
+      
+      if (currentPull >= PULL_THRESHOLD) {
         setRefreshing(true);
-        setPullDistance(PULL_THRESHOLD); // Quedar suspendido en el umbral mientras recarga
+        refreshingRef.current = true;
+        setPullDistance(PULL_THRESHOLD);
+        pullDistanceRef.current = PULL_THRESHOLD;
         
         try {
-          // Refrescar todas las queries activas en React Query v5
           await queryClient.refetchQueries({ type: 'active' });
         } catch (err) {
           console.error("Error al refrescar las peticiones:", err);
         } finally {
           setRefreshing(false);
+          refreshingRef.current = false;
           setPullDistance(0);
+          pullDistanceRef.current = 0;
         }
       } else {
         setPullDistance(0);
+        pullDistanceRef.current = 0;
       }
     };
 
@@ -90,7 +115,7 @@ export default function DashboardLayout({
         container.removeEventListener("touchend", handleTouchEnd);
       }
     };
-  }, [isDragging, pullDistance, refreshing, queryClient]);
+  }, [queryClient]);
 
   // Rotación del icono mientras arrastras o refrescas
   const rotation = refreshing ? "animate-spin" : "";

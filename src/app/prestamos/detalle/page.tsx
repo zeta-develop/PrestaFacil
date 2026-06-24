@@ -389,21 +389,47 @@ _Generado automáticamente desde PrestaFácil_`;
         .replace(/\s+/g, "_")
         .replace(/[^a-zA-Z0-9_]/g, "");
       const fileName = `tarjeta_pagos_${safeClienteNombre}.pdf`;
-      const pdfBlob = doc.output("blob");
-      
-      const file = new File([pdfBlob], fileName, { type: "application/pdf" });
 
-      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
+      const { Capacitor } = await import("@capacitor/core");
+
+      if (Capacitor.isNativePlatform()) {
+        const { Filesystem, Directory } = await import("@capacitor/filesystem");
+        const { Share } = await import("@capacitor/share");
+
+        // Convertir PDF a Base64
+        const dataUri = doc.output("datauristring");
+        const pdfBase64 = dataUri.split(",")[1];
+        
+        // Guardar archivo temporal en la caché de la aplicación
+        const writeResult = await Filesystem.writeFile({
+          path: fileName,
+          data: pdfBase64,
+          directory: Directory.Cache,
+        });
+
+        // Compartir el archivo nativo
+        await Share.share({
           title: 'Tarjeta de Control de Pagos',
           text: `Te comparto la Tarjeta de Control de Pagos de ${prestamo.clientes?.nombre}`,
+          url: writeResult.uri,
         });
         toast.success("PDF compartido con éxito");
       } else {
-        // Fallback: descargar el PDF en móviles que no admitan Web Share
-        doc.save(fileName);
-        toast.success("PDF descargado en el dispositivo");
+        // Modo Web / PWA
+        const pdfBlob = doc.output("blob");
+        const file = new File([pdfBlob], fileName, { type: "application/pdf" });
+
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'Tarjeta de Control de Pagos',
+            text: `Te comparto la Tarjeta de Control de Pagos de ${prestamo.clientes?.nombre}`,
+          });
+          toast.success("PDF compartido con éxito");
+        } else {
+          doc.save(fileName);
+          toast.success("PDF descargado en el dispositivo");
+        }
       }
     } catch (error) {
       console.error("Error al compartir PDF:", error);
@@ -411,8 +437,22 @@ _Generado automáticamente desde PrestaFácil_`;
     }
   };
 
-  const handlePrintPDF = () => {
-    window.print();
+  const handlePrintPDF = async () => {
+    if (!prestamo) return;
+    
+    try {
+      const { Capacitor } = await import("@capacitor/core");
+      
+      if (Capacitor.isNativePlatform()) {
+        toast.info("Generando vista previa del PDF...");
+        await handleSharePDF();
+      } else {
+        window.print();
+      }
+    } catch (err) {
+      console.error("Error al imprimir:", err);
+      window.print();
+    }
   };
 
   const handleRegisterPayment = async (e: React.FormEvent) => {
