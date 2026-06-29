@@ -265,3 +265,28 @@ export const dashboardService = {
     return await checkAndPerformKPICut(configData, userId);
   }
 };
+
+export const moraService = {
+  async getAll(userId: string) {
+    const { data, error } = await supabase
+      .from("moras")
+      .select("*, prestamos(*, clientes(*))")
+      .eq("user_id", userId)
+      .order("fecha_generada", { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  },
+
+  async getPendientes(userId: string) {
+    const { data, error } = await supabase
+      .from("moras")
+      .select("*, prestamos(*, clientes(*))")
+      .eq("user_id", userId)
+      .eq("estado", "pendiente")
+      .order("dias_atraso", { ascending: false });
+    
+    if (error) throw error;
+    return data;
+  }
+};

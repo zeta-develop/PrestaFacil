@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { AutoUpdater } from "./AutoUpdater";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function ProtectedRoute({
   children,
@@ -12,6 +13,7 @@ export default function ProtectedRoute({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -21,6 +23,7 @@ export default function ProtectedRoute({
       } = await supabase.auth.getUser();
       
       if (!user) {
+        queryClient.clear();
         router.replace("/login");
       } else {
         setLoading(false);
@@ -32,7 +35,10 @@ export default function ProtectedRoute({
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      // Limpiar caché en cualquier cambio de sesión (login, logout, token refresh)
+      queryClient.clear();
+      
       if (!session) {
         router.replace("/login");
       } else {

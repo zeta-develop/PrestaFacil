@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { ArrowLeft, User, Phone, MapPin } from "lucide-react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function NuevoClientePage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -38,6 +40,8 @@ export default function NuevoClientePage() {
 
       if (error) throw error;
       
+      queryClient.invalidateQueries({ queryKey: ["clientes"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
       toast.success("Cliente creado exitosamente");
       router.push("/clientes");
     } catch (error) {

@@ -5,13 +5,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { ArrowLeft, User, Phone, MapPin, Activity } from "lucide-react";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { clienteService } from "@/services/databaseService";
 
 function ClientesEditarContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
+  const queryClient = useQueryClient();
 
   const [saving, setSaving] = useState(false);
   
@@ -72,6 +73,10 @@ function ClientesEditarContent() {
         .eq("user_id", user.id);
 
       if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ["clientes"] });
+      queryClient.invalidateQueries({ queryKey: ["cliente-editar", id] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
       
       toast.success("Cliente actualizado exitosamente");
       router.push(`/clientes/detalle?id=${id}`);

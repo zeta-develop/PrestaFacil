@@ -6,9 +6,11 @@ import { supabase } from "@/lib/supabase/client";
 import CustomSelect from "@/components/CustomSelect";
 import { ArrowLeft, MapPin, Calendar, AlignLeft } from "lucide-react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function NuevaRutaPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -41,6 +43,8 @@ export default function NuevaRutaPage() {
 
       if (error) throw error;
       
+      queryClient.invalidateQueries({ queryKey: ["rutasDiarias"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
       toast.success("Ruta creada exitosamente");
       router.push("/rutas");
     } catch (error) {
