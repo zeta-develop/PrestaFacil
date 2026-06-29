@@ -36,8 +36,10 @@ export default function ProtectedRoute({
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      // Limpiar caché en cualquier cambio de sesión (login, logout, token refresh)
-      queryClient.clear();
+      // Limpiar caché únicamente en inicio o cierre de sesión explícitos
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
+        queryClient.clear();
+      }
       
       if (!session) {
         router.replace("/login");
