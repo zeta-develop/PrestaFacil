@@ -268,18 +268,23 @@ export const dashboardService = {
 
 export const moraService = {
   async getAll(userId: string) {
-    const { data, error } = await supabase
+    const { data: dbMoras, error } = await supabase
       .from("moras")
       .select("*, prestamos(*, clientes(*))")
       .eq("user_id", userId)
       .order("fecha_generada", { ascending: false });
     
     if (error) throw error;
-    return data;
+
+    if (dbMoras && dbMoras.length > 0) {
+      return dbMoras;
+    }
+
+    return await this.calculateMorasAlVuelo(userId, false);
   },
 
   async getPendientes(userId: string) {
-    const { data, error } = await supabase
+    const { data: dbMoras, error } = await supabase
       .from("moras")
       .select("*, prestamos(*, clientes(*))")
       .eq("user_id", userId)
@@ -287,6 +292,86 @@ export const moraService = {
       .order("dias_atraso", { ascending: false });
     
     if (error) throw error;
-    return data;
+
+    if (dbMoras && dbMoras.length > 0) {
+      return dbMoras;
+    }
+
+    return await this.calculateMorasAlVuelo(userId, true);
+  },
+
+  async calculateMorasAlVuelo(userId: string, soloPendientes: boolean) {
+    const { data: prestamos, error } = await supabase
+      .from("prestamos")
+      .select("*, clientes(*)")
+      .eq("user_id", userId)
+      .eq("estado", "activo");
+
+    if (error) throw error;
+    if (!prestamos) return [];
+
+    const morasCalculadas: any[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (const p of prestamos) {
+      if (!p.fecha_inicio) continue;
+      
+      const start = new Date(p.fecha_inicio + "T00:00:00");
+      const diffTime = today.getTime() - start.getTime();
+      const diffDays = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+
+      let cuotasDebias = 0;
+      let diasFrecuencia = 1;
+
+      switch (p.tipo_pago) {
+        case "diario":
+          cuotasDebias = diffDays;
+          diasFrecuencia = 1;
+          break;
+        case "semanal":
+          cuotasDebias = Math.floor(diffDays / 7);
+          diasFrecuencia = 7;
+          break;
+        case "quincenal":
+          cuotasDebias = Math.floor(diffDays / 15);
+          diasFrecuencia = 15;
+          break;
+        case "mensual":
+          cuotasDebias = Math.floor(diffDays / 30);
+          diasFrecuencia = 30;
+          break;
+      }
+
+      cuotasDebias = Math.min(cuotasDebias, p.numero_cuotas);
+
+      if (p.cuotas_pagadas < cuotasDebias) {
+        const cuotasAtrasadas = cuotasDebias - p.cuotas_pagadas;
+        const diasAtraso = Math.max(1, diffDays - (p.cuotas_pagadas * diasFrecuencia));
+        const montoMora = cuotasAtrasadas * Number(p.valor_cuota);
+
+        morasCalculadas.push({
+          id: `calc-${p.id}`,
+          user_id: userId,
+          prestamo_id: p.id,
+          dias_atraso: diasAtraso,
+          monto_mora: montoMora,
+          porcentaje_mora: 0,
+          estado: "pendiente",
+          fecha_generada: new Date(today.getTime() - (diasAtraso * 24 * 60 * 60 * 1000)).toISOString(),
+          fecha_pagada: null,
+          prestamos: {
+            id: p.id,
+            monto: p.monto,
+            saldo_pendiente: p.saldo_pendiente,
+            valor_cuota: p.valor_cuota,
+            tipo_pago: p.tipo_pago,
+            clientes: p.clientes
+          }
+        });
+      }
+    }
+
+    return morasCalculadas;
   }
 };
