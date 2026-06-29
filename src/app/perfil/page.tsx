@@ -105,7 +105,7 @@ export default function PerfilPage() {
           .insert({
             user_id: user.id,
             capital_inicial: numCapital,
-            capital_disponible: numCapital,
+            capital_disponible: 0,
             dia_corte_kpi: numDiaCorte
           });
       }

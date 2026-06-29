@@ -95,19 +95,19 @@ function ClientesEditarContent() {
   return (
     <main className="flex-1 p-6 relative z-10 space-y-6 pb-24">
       <header className="flex items-center gap-4 pt-2">
-        <button onClick={() => router.back()} className="h-10 w-10 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white transition-colors active:scale-95">
+        <button onClick={() => router.back()} className="h-10 w-10 flex items-center justify-center rounded-2xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors active:scale-95 shadow-sm dark:shadow-none">
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-xl font-bold text-white">Editar Cliente</h1>
-          <p className="text-xs font-medium text-zinc-400 uppercase tracking-widest">Modificar Registro</p>
+          <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Editar Cliente</h1>
+          <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Modificar Registro</p>
         </div>
       </header>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Nombre */}
         <section className="space-y-3">
-          <label className="flex items-center gap-2 text-xs font-medium text-zinc-400 uppercase tracking-wider pl-1">
+          <label className="flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider pl-1">
             <User size={14} /> Nombre Completo
           </label>
           <input
@@ -116,13 +116,13 @@ function ClientesEditarContent() {
             value={formData.nombre}
             onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
             placeholder="Ej. María López"
-            className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none transition-all text-white backdrop-blur-md"
+            className="w-full px-4 py-3.5 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none transition-all text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 backdrop-blur-md shadow-sm dark:shadow-none"
           />
         </section>
 
         {/* Teléfono */}
         <section className="space-y-3">
-          <label className="flex items-center gap-2 text-xs font-medium text-zinc-400 uppercase tracking-wider pl-1">
+          <label className="flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider pl-1">
             <Phone size={14} /> Teléfono
           </label>
           <input
@@ -130,13 +130,13 @@ function ClientesEditarContent() {
             value={formData.telefono}
             onChange={(e) => setFormData({ ...formData, telefono: e.target.value })}
             placeholder="Ej. 555-1234"
-            className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none transition-all text-white backdrop-blur-md"
+            className="w-full px-4 py-3.5 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none transition-all text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 backdrop-blur-md shadow-sm dark:shadow-none"
           />
         </section>
 
         {/* Dirección */}
         <section className="space-y-3">
-          <label className="flex items-center gap-2 text-xs font-medium text-zinc-400 uppercase tracking-wider pl-1">
+          <label className="flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider pl-1">
             <MapPin size={14} /> Dirección
           </label>
           <textarea
@@ -144,13 +144,13 @@ function ClientesEditarContent() {
             onChange={(e) => setFormData({ ...formData, direccion: e.target.value })}
             placeholder="Ej. Calle Principal #123"
             rows={3}
-            className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none transition-all text-white backdrop-blur-md resize-none"
+            className="w-full px-4 py-3.5 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none transition-all text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 backdrop-blur-md shadow-sm dark:shadow-none resize-none"
           />
         </section>
 
         {/* Estado */}
         <section className="space-y-3">
-          <label className="flex items-center gap-2 text-xs font-medium text-zinc-400 uppercase tracking-wider pl-1">
+          <label className="flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider pl-1">
             <Activity size={14} /> Estado
           </label>
           <div className="grid grid-cols-2 gap-3">
@@ -159,8 +159,8 @@ function ClientesEditarContent() {
               onClick={() => setFormData({ ...formData, estado: "activo" })}
               className={`py-3 rounded-2xl border font-bold text-sm transition-all active:scale-[0.98] ${
                 formData.estado === "activo"
-                  ? "bg-teal-500/10 border-teal-500 text-teal-400 shadow-[0_0_15px_rgba(20,184,166,0.15)]"
-                  : "bg-white/5 border-white/10 text-zinc-400 hover:text-white"
+                  ? "bg-teal-50 dark:bg-teal-500/10 border-teal-500 text-teal-600 dark:text-teal-400 shadow-[0_0_15px_rgba(20,184,166,0.15)]"
+                  : "bg-white dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
               }`}
             >
               Activo
@@ -170,8 +170,8 @@ function ClientesEditarContent() {
               onClick={() => setFormData({ ...formData, estado: "inactivo" })}
               className={`py-3 rounded-2xl border font-bold text-sm transition-all active:scale-[0.98] ${
                 formData.estado === "inactivo"
-                  ? "bg-red-500/10 border-red-500 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.15)]"
-                  : "bg-white/5 border-white/10 text-zinc-400 hover:text-white"
+                  ? "bg-red-50 dark:bg-red-500/10 border-red-500 text-red-600 dark:text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.15)]"
+                  : "bg-white dark:bg-white/5 border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
               }`}
             >
               Inactivo

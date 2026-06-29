@@ -136,7 +136,7 @@ export default function NuevoPagoPage() {
             capital_disponible: Number(configData.capital_disponible) + montoPago,
             capital_en_calle: Number(configData.capital_en_calle) - capitalAbonado,
             ganancia_total: Number(configData.ganancia_total) + interesPagado,
-            total_recuperado: Number(configData.total_recuperado) + montoPago
+            total_recuperado: Number(configData.total_recuperado) + capitalAbonado
           })
           .eq("user_id", user.id);
         
@@ -160,19 +160,19 @@ export default function NuevoPagoPage() {
   return (
     <main className="flex-1 p-6 relative z-10 space-y-6 pb-24">
       <header className="flex items-center gap-4 pt-2">
-        <button onClick={() => router.back()} className="h-10 w-10 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white transition-colors active:scale-95">
+        <button onClick={() => router.back()} className="h-10 w-10 flex items-center justify-center rounded-2xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors active:scale-95 shadow-sm dark:shadow-none">
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-xl font-bold text-white">Registrar Pago</h1>
-          <p className="text-xs font-medium text-zinc-400 uppercase tracking-widest">Abono a Préstamo</p>
+          <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Registrar Pago</h1>
+          <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Abono a Préstamo</p>
         </div>
       </header>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Préstamo / Cliente */}
         <section className="space-y-3">
-          <label className="flex items-center gap-2 text-xs font-medium text-zinc-400 uppercase tracking-wider pl-1">
+          <label className="flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider pl-1">
             <User size={14} /> Seleccionar Cliente con Préstamo
           </label>
           <CustomSelect
@@ -188,22 +188,22 @@ export default function NuevoPagoPage() {
         </section>
 
         {selectedPrestamo && (
-          <div className="rounded-3xl bg-blue-500/10 border border-blue-500/20 p-5 backdrop-blur-md space-y-3 mb-6 text-sm">
+          <div className="rounded-3xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 p-5 backdrop-blur-md space-y-3 mb-6 text-sm">
             <div className="flex justify-between">
-              <span className="text-zinc-400">Saldo Actual:</span>
-              <span className="text-white font-bold">${selectedPrestamo.saldo_pendiente.toFixed(2)}</span>
+              <span className="text-zinc-500 dark:text-zinc-400">Saldo Actual:</span>
+              <span className="text-zinc-900 dark:text-white font-bold">${selectedPrestamo.saldo_pendiente.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-zinc-400">Cuota Sugerida:</span>
-              <span className="text-blue-400 font-bold">${selectedPrestamo.valor_cuota.toFixed(2)}</span>
+              <span className="text-zinc-500 dark:text-zinc-400">Cuota Sugerida:</span>
+              <span className="text-blue-600 dark:text-blue-400 font-bold">${selectedPrestamo.valor_cuota.toFixed(2)}</span>
             </div>
-            </div>
-            )}
+          </div>
+        )}
 
 
         {/* Monto del Pago */}
         <section className="space-y-3">
-          <label className="flex items-center gap-2 text-xs font-medium text-zinc-400 uppercase tracking-wider pl-1">
+          <label className="flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider pl-1">
             <DollarSign size={14} /> Monto a Pagar
           </label>
           <input
@@ -214,7 +214,7 @@ export default function NuevoPagoPage() {
             value={formData.monto_pagado}
             onChange={(e) => setFormData({ ...formData, monto_pagado: e.target.value })}
             placeholder="0.00"
-            className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all text-white backdrop-blur-md text-xl font-bold"
+            className="w-full px-4 py-3.5 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 outline-none transition-all text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 backdrop-blur-md text-xl font-bold shadow-sm dark:shadow-none"
           />
         </section>
 

@@ -54,18 +54,18 @@ export default function NuevaRutaPage() {
   return (
     <main className="flex-1 p-6 relative z-10 space-y-6 pb-24">
       <header className="flex items-center gap-4 pt-2">
-        <button onClick={() => router.back()} className="h-10 w-10 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white transition-colors active:scale-95">
+        <button onClick={() => router.back()} className="h-10 w-10 flex items-center justify-center rounded-2xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors active:scale-95 shadow-sm dark:shadow-none">
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-xl font-bold text-white">Nueva Ruta</h1>
-          <p className="text-xs font-medium text-zinc-400 uppercase tracking-widest">Crear Registro</p>
+          <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Nueva Ruta</h1>
+          <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Crear Registro</p>
         </div>
       </header>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <section className="space-y-3">
-          <label className="flex items-center gap-2 text-xs font-medium text-zinc-400 uppercase tracking-wider pl-1">
+          <label className="flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider pl-1">
             <MapPin size={14} /> Nombre de la Ruta
           </label>
           <input
@@ -74,12 +74,12 @@ export default function NuevaRutaPage() {
             value={formData.nombre}
             onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
             placeholder="Ej. Zona Centro"
-            className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition-all text-white backdrop-blur-md"
+            className="w-full px-4 py-3.5 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition-all text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 backdrop-blur-md shadow-sm dark:shadow-none"
           />
         </section>
 
         <section className="space-y-3">
-          <label className="flex items-center gap-2 text-xs font-medium text-zinc-400 uppercase tracking-wider pl-1">
+          <label className="flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider pl-1">
             <Calendar size={14} /> Día de la Semana
           </label>
           <CustomSelect
@@ -91,7 +91,7 @@ export default function NuevaRutaPage() {
         </section>
 
         <section className="space-y-3">
-          <label className="flex items-center gap-2 text-xs font-medium text-zinc-400 uppercase tracking-wider pl-1">
+          <label className="flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider pl-1">
             <AlignLeft size={14} /> Descripción (Opcional)
           </label>
           <textarea
@@ -99,7 +99,7 @@ export default function NuevaRutaPage() {
             onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
             placeholder="Ej. Cobros de 9am a 2pm"
             rows={3}
-            className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition-all text-white backdrop-blur-md resize-none"
+            className="w-full px-4 py-3.5 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 outline-none transition-all text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 backdrop-blur-md shadow-sm dark:shadow-none resize-none"
           />
         </section>
 

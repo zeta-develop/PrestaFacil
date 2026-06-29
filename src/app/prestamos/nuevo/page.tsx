@@ -217,7 +217,7 @@ export default function NuevoPrestamoPage() {
         const nuevoCapitalDisponible = Number(configData.capital_disponible) - montoNeto + totalMontoPagadoRefinanciamiento;
         const nuevoCapitalEnCalle = Number(configData.capital_en_calle) + montoNeto - totalCapitalRecuperadoRefinanciamiento;
         const nuevaGananciaTotal = Number(configData.ganancia_total) + totalInteresGanadoRefinanciamiento;
-        const nuevoTotalRecuperado = Number(configData.total_recuperado) + totalMontoPagadoRefinanciamiento;
+        const nuevoTotalRecuperado = Number(configData.total_recuperado) + totalCapitalRecuperadoRefinanciamiento;
         const nuevoTotalPrestado = Number(configData.total_prestado) + montoNeto;
 
         const { error: updateError } = await supabase
@@ -267,19 +267,19 @@ export default function NuevoPrestamoPage() {
   return (
     <main className="flex-1 p-6 relative z-10 space-y-6 pb-24">
       <header className="flex items-center gap-4 pt-2">
-        <button onClick={() => router.back()} className="h-10 w-10 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white transition-colors active:scale-95">
+        <button onClick={() => router.back()} className="h-10 w-10 flex items-center justify-center rounded-2xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors active:scale-95 shadow-sm dark:shadow-none">
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-xl font-bold text-white">Nuevo Préstamo</h1>
-          <p className="text-xs font-medium text-zinc-400 uppercase tracking-widest">Crear Registro</p>
+          <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Nuevo Préstamo</h1>
+          <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-widest">Crear Registro</p>
         </div>
       </header>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Cliente */}
         <section className="space-y-3">
-          <label className="flex items-center gap-2 text-xs font-medium text-zinc-400 uppercase tracking-wider pl-1">
+          <label className="flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider pl-1">
             <User size={14} /> Cliente
           </label>
           <CustomSelect
@@ -293,12 +293,12 @@ export default function NuevoPrestamoPage() {
 
         {/* Alerta de Deudas Activas */}
         {deudasActivas > 0 && (
-          <section className="rounded-3xl bg-orange-500/10 border border-orange-500/30 p-4 space-y-3 backdrop-blur-md">
+          <section className="rounded-3xl bg-orange-500/5 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/30 p-4 space-y-3 backdrop-blur-md">
             <div className="flex items-start gap-3">
               <AlertCircle size={18} className="text-orange-500 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
-                <h4 className="text-sm font-bold text-orange-600 dark:text-orange-400">Cliente con Deuda Activa</h4>
-                <p className="text-xs text-orange-600/80 dark:text-orange-400/80 mt-1">
+                <h4 className="text-sm font-bold text-orange-700 dark:text-orange-400">Cliente con Deuda Activa</h4>
+                <p className="text-xs text-orange-600 dark:text-orange-400/80 mt-1">
                   Este cliente tiene {prestamosPendientes.length} préstamo(s) activo(s) con saldo pendiente.
                 </p>
               </div>
@@ -306,15 +306,15 @@ export default function NuevoPrestamoPage() {
 
             {/* Monto de Deuda */}
             <div className="grid grid-cols-2 gap-3 mt-3">
-              <div className="bg-white/5 rounded-xl p-3 border border-orange-500/20">
-                <span className="text-xs text-orange-600/80 dark:text-orange-400/80">Deuda Total Pendiente</span>
+              <div className="bg-orange-100/50 dark:bg-white/5 rounded-xl p-3 border border-orange-200 dark:border-orange-500/20">
+                <span className="text-xs text-orange-700 dark:text-orange-400/80">Deuda Total Pendiente</span>
                 <div className="text-lg font-bold text-orange-600 dark:text-orange-400 mt-1">
                   ${deudasActivas.toFixed(2)}
                 </div>
               </div>
               {descontarDeuda && montoNeto !== monto && (
-                <div className="bg-white/5 rounded-xl p-3 border border-teal-500/20">
-                  <span className="text-xs text-teal-600/80 dark:text-teal-400/80">Monto Neto</span>
+                <div className="bg-teal-50 dark:bg-white/5 rounded-xl p-3 border border-teal-200 dark:border-teal-500/20">
+                  <span className="text-xs text-teal-700 dark:text-teal-400/80">Monto Neto</span>
                   <div className="text-lg font-bold text-teal-600 dark:text-teal-400 mt-1">
                     ${montoNeto.toFixed(2)}
                   </div>
@@ -323,26 +323,26 @@ export default function NuevoPrestamoPage() {
             </div>
 
             {/* Checkbox Descontar */}
-            <label className="flex items-center gap-3 cursor-pointer mt-3 p-2 rounded-lg hover:bg-white/5 transition-colors">
+            <label className="flex items-center gap-3 cursor-pointer mt-3 p-2 rounded-lg hover:bg-orange-100/30 dark:hover:bg-white/5 transition-colors">
               <input
                 type="checkbox"
                 checked={descontarDeuda}
                 onChange={(e) => setDescontarDeuda(e.target.checked)}
                 className="w-4 h-4 rounded border-orange-500/50 accent-orange-500 cursor-pointer"
               />
-              <span className="text-sm font-medium text-orange-600 dark:text-orange-400">
+              <span className="text-sm font-medium text-orange-700 dark:text-orange-400">
                 Descontar deuda del nuevo préstamo
               </span>
             </label>
 
             {descontarDeuda && monto >= deudasActivas && (
-              <div className="flex items-center gap-2 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 p-2 rounded-lg">
+              <div className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 p-2 rounded-lg">
                 <CheckCircle2 size={14} />
                 <span>Deuda será completamente liquidada</span>
               </div>
             )}
             {descontarDeuda && monto < deudasActivas && (
-              <div className="flex items-center gap-2 text-xs text-orange-600 dark:text-orange-400 bg-orange-500/10 p-2 rounded-lg">
+              <div className="flex items-center gap-2 text-xs text-orange-700 dark:text-orange-400 bg-orange-500/10 p-2 rounded-lg">
                 <AlertCircle size={14} />
                 <span>El monto debe ser mayor a ${deudasActivas.toFixed(2)} para liquidar la deuda</span>
               </div>
@@ -353,7 +353,7 @@ export default function NuevoPrestamoPage() {
         {/* Monto e Interés */}
         <div className="grid grid-cols-2 gap-4">
           <section className="space-y-3">
-            <label className="flex items-center gap-2 text-xs font-medium text-zinc-400 uppercase tracking-wider pl-1">
+            <label className="flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider pl-1">
               <DollarSign size={14} /> Monto
             </label>
             <input
@@ -363,12 +363,12 @@ export default function NuevoPrestamoPage() {
               value={formData.monto_prestado}
               onChange={(e) => setFormData({ ...formData, monto_prestado: e.target.value })}
               placeholder="0.00"
-              className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none transition-all text-white backdrop-blur-md"
+              className="w-full px-4 py-3.5 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none transition-all text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 backdrop-blur-md shadow-sm dark:shadow-none"
             />
           </section>
 
           <section className="space-y-3">
-            <label className="flex items-center gap-2 text-xs font-medium text-zinc-400 uppercase tracking-wider pl-1">
+            <label className="flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider pl-1">
               <Calculator size={14} /> Interés (%)
             </label>
             <input
@@ -377,7 +377,7 @@ export default function NuevoPrestamoPage() {
               min="0"
               value={formData.porcentaje_interes}
               onChange={(e) => setFormData({ ...formData, porcentaje_interes: e.target.value })}
-              className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none transition-all text-white backdrop-blur-md"
+              className="w-full px-4 py-3.5 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none transition-all text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 backdrop-blur-md shadow-sm dark:shadow-none"
             />
           </section>
         </div>
@@ -385,7 +385,7 @@ export default function NuevoPrestamoPage() {
         {/* Frecuencia y Cuotas */}
         <div className="grid grid-cols-2 gap-4">
           <section className="space-y-3">
-            <label className="flex items-center gap-2 text-xs font-medium text-zinc-400 uppercase tracking-wider pl-1">
+            <label className="flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider pl-1">
               <Calendar size={14} /> Frecuencia
             </label>
             <CustomSelect
@@ -402,7 +402,7 @@ export default function NuevoPrestamoPage() {
           </section>
 
           <section className="space-y-3">
-            <label className="flex items-center gap-2 text-xs font-medium text-zinc-400 uppercase tracking-wider pl-1">
+            <label className="flex items-center gap-2 text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider pl-1">
               Cuotas
             </label>
             <input
@@ -411,27 +411,27 @@ export default function NuevoPrestamoPage() {
               min="1"
               value={formData.cantidad_cuotas}
               onChange={(e) => setFormData({ ...formData, cantidad_cuotas: e.target.value })}
-              className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-2xl focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none transition-all text-white backdrop-blur-md"
+              className="w-full px-4 py-3.5 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none transition-all text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 backdrop-blur-md shadow-sm dark:shadow-none"
             />
           </section>
         </div>
 
         {/* Resumen Calculado */}
-        <section className="rounded-3xl bg-gradient-to-br from-teal-500/10 to-teal-900/10 border border-teal-500/20 p-5 backdrop-blur-md space-y-4">
-          <h3 className="text-xs font-medium text-teal-400 uppercase tracking-widest text-center">Resumen del Préstamo</h3>
+        <section className="rounded-3xl bg-teal-50 dark:bg-gradient-to-br dark:from-teal-500/10 dark:to-teal-900/10 border border-teal-100 dark:border-teal-500/20 p-5 backdrop-blur-md space-y-4">
+          <h3 className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-widest text-center">Resumen del Préstamo</h3>
           <div className="flex justify-between items-center text-sm">
-            <span className="text-zinc-400">Total a pagar:</span>
-            <span className="text-lg font-bold text-white">${totalPagar.toFixed(2)}</span>
-                    {descontarDeuda && deudasActivas > 0 && (
-                      <div className="flex justify-between items-center text-sm pt-3 border-t border-orange-500/20">
-                        <span className="text-zinc-400">Descuento (Deuda):</span>
-                        <span className="text-lg font-bold text-orange-500">-${deudasActivas.toFixed(2)}</span>
-                      </div>
-                    )}
+            <span className="text-zinc-500 dark:text-zinc-400">Total a pagar:</span>
+            <span className="text-lg font-bold text-zinc-900 dark:text-white">${totalPagar.toFixed(2)}</span>
           </div>
+          {descontarDeuda && deudasActivas > 0 && (
+            <div className="flex justify-between items-center text-sm pt-3 border-t border-orange-200 dark:border-orange-500/20">
+              <span className="text-zinc-500 dark:text-zinc-400">Descuento (Deuda):</span>
+              <span className="text-lg font-bold text-orange-500">-${deudasActivas.toFixed(2)}</span>
+            </div>
+          )}
           <div className="flex justify-between items-center text-sm">
-            <span className="text-zinc-400">Monto de cuota:</span>
-            <span className="text-lg font-bold text-white">${cuotaMonto.toFixed(2)}</span>
+            <span className="text-zinc-500 dark:text-zinc-400">Monto de cuota:</span>
+            <span className="text-lg font-bold text-zinc-900 dark:text-white">${cuotaMonto.toFixed(2)}</span>
           </div>
         </section>
 

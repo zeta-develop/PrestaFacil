@@ -50,10 +50,10 @@ function ClienteDetalleContent() {
     return (
       <main className="flex-1 p-6 relative z-10 space-y-6">
         <header className="flex items-center gap-4 pt-2">
-          <button onClick={() => router.back()} className="h-10 w-10 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white transition-colors">
+          <button onClick={() => router.back()} className="h-10 w-10 flex items-center justify-center rounded-2xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">
             <ArrowLeft size={20} />
           </button>
-          <h1 className="text-xl font-bold text-white">Cliente no encontrado</h1>
+          <h1 className="text-xl font-bold text-zinc-900 dark:text-white">Cliente no encontrado</h1>
         </header>
       </main>
     );
@@ -64,47 +64,47 @@ function ClienteDetalleContent() {
       {/* Header */}
       <header className="flex items-center justify-between pt-2">
         <div className="flex items-center gap-4">
-          <button onClick={() => router.back()} className="h-10 w-10 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10 text-zinc-400 hover:text-white transition-colors active:scale-95">
+          <button onClick={() => router.back()} className="h-10 w-10 flex items-center justify-center rounded-2xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors active:scale-95 shadow-sm dark:shadow-none">
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-xl font-bold text-white tracking-tight">Perfil del Cliente</h1>
+            <h1 className="text-xl font-bold text-zinc-900 dark:text-white tracking-tight">Perfil del Cliente</h1>
           </div>
         </div>
         <Link 
           href={`/clientes/editar?id=${id}`}
-          className="px-4 py-2 text-xs font-bold text-teal-400 bg-teal-500/10 border border-teal-500/20 hover:bg-teal-500/20 rounded-xl transition-all active:scale-95 shadow-[0_0_15px_rgba(20,184,166,0.1)]"
+          className="px-4 py-2 text-xs font-bold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-500/10 border border-teal-200 dark:border-teal-500/20 hover:bg-teal-100 dark:hover:bg-teal-500/20 rounded-xl transition-all active:scale-95 shadow-sm dark:shadow-[0_0_15px_rgba(20,184,166,0.1)]"
         >
           Editar
         </Link>
       </header>
 
       {/* Info Card */}
-      <section className="rounded-3xl bg-white/5 border border-white/10 p-6 backdrop-blur-md flex flex-col items-center text-center space-y-4 relative overflow-hidden">
+      <section className="rounded-3xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 p-6 backdrop-blur-md flex flex-col items-center text-center space-y-4 relative overflow-hidden shadow-sm dark:shadow-none">
         {/* Glow effect */}
-        <div className="absolute -top-10 -right-10 w-32 h-32 bg-teal-500/20 blur-[50px] rounded-full pointer-events-none"></div>
+        <div className="absolute -top-10 -right-10 w-32 h-32 bg-teal-500/15 dark:bg-teal-500/20 blur-[50px] rounded-full pointer-events-none"></div>
         
-        <div className="h-20 w-20 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 shadow-[0_0_20px_rgba(45,212,191,0.2)] border border-white/10 flex items-center justify-center text-white text-3xl font-black relative z-10">
+        <div className="h-20 w-20 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 shadow-[0_0_20px_rgba(45,212,191,0.2)] border border-zinc-300 dark:border-white/10 flex items-center justify-center text-white text-3xl font-black relative z-10">
           {cliente.nombre.charAt(0).toUpperCase()}
         </div>
         
         <div className="space-y-1 relative z-10">
-          <h2 className="text-2xl font-bold text-white leading-tight">{cliente.nombre}</h2>
+          <h2 className="text-2xl font-bold text-zinc-900 dark:text-white leading-tight">{cliente.nombre}</h2>
           <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-            cliente.estado === 'activo' ? 'bg-teal-500/10 text-teal-400 border border-teal-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+            cliente.estado === 'activo' ? 'bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-200 dark:border-teal-500/20' : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20'
           }`}>
             <Activity size={10} />
             {cliente.estado}
           </span>
         </div>
 
-        <div className="w-full pt-4 mt-2 border-t border-white/5 flex flex-col gap-3 text-left">
-          <div className="flex items-center gap-3 text-sm text-zinc-300">
-            <div className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center text-teal-400"><Phone size={14} /></div>
+        <div className="w-full pt-4 mt-2 border-t border-zinc-100 dark:border-white/5 flex flex-col gap-3 text-left">
+          <div className="flex items-center gap-3 text-sm text-zinc-650 dark:text-zinc-300">
+            <div className="h-8 w-8 rounded-full bg-zinc-100 dark:bg-white/5 flex items-center justify-center text-teal-600 dark:text-teal-400"><Phone size={14} /></div>
             {cliente.telefono || "Sin teléfono registrado"}
           </div>
-          <div className="flex items-center gap-3 text-sm text-zinc-300">
-            <div className="h-8 w-8 rounded-full bg-white/5 flex items-center justify-center text-indigo-400"><MapPin size={14} /></div>
+          <div className="flex items-center gap-3 text-sm text-zinc-650 dark:text-zinc-300">
+            <div className="h-8 w-8 rounded-full bg-zinc-100 dark:bg-white/5 flex items-center justify-center text-indigo-600 dark:text-indigo-400"><MapPin size={14} /></div>
             {cliente.direccion || "Sin dirección registrada"}
           </div>
         </div>
@@ -113,16 +113,16 @@ function ClienteDetalleContent() {
       {/* Historial de Préstamos */}
       <section className="space-y-4">
         <div className="flex items-center justify-between pl-1">
-          <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-widest">Historial de Préstamos</h3>
-          <span className="px-2.5 py-1 bg-white/10 text-white text-xs font-bold rounded-full">
+          <h3 className="text-sm font-medium text-zinc-550 dark:text-zinc-400 uppercase tracking-widest">Historial de Préstamos</h3>
+          <span className="px-2.5 py-1 bg-zinc-200 dark:bg-white/10 text-zinc-800 dark:text-white text-xs font-bold rounded-full">
             {cliente.prestamos?.length || 0}
           </span>
         </div>
 
         <div className="space-y-3">
           {!cliente.prestamos || cliente.prestamos.length === 0 ? (
-            <div className="text-center py-8 rounded-3xl bg-white/5 border border-white/10 border-dashed">
-              <DollarSign size={24} className="mx-auto text-zinc-600 mb-2" />
+            <div className="text-center py-8 rounded-3xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 border-dashed shadow-sm dark:shadow-none">
+              <DollarSign size={24} className="mx-auto text-zinc-400 dark:text-zinc-600 mb-2" />
               <p className="text-sm text-zinc-500">Este cliente no tiene préstamos activos ni en el historial.</p>
             </div>
           ) : (

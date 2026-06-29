@@ -186,7 +186,7 @@ export default function RutasInteligentesPage() {
             capital_disponible: Number(configData.capital_disponible) + montoPago,
             capital_en_calle: Number(configData.capital_en_calle) - capitalAbonado,
             ganancia_total: Number(configData.ganancia_total) + interesPagado,
-            total_recuperado: Number(configData.total_recuperado) + montoPago
+            total_recuperado: Number(configData.total_recuperado) + capitalAbonado
           })
           .eq("user_id", session.id);
       }
