@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo } from 'react';
 import Link from "next/link";
-import { supabase } from "@/lib/supabase/client";
+import { supabase } from '@/lib/supabase/client';
 import DashboardLayout from "@/components/DashboardLayout";
-import { ArrowLeft, Search, Calendar, Filter, ChevronRight, ArrowUpRight, ArrowDownLeft, Plus, X, DollarSign, Wallet } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { ArrowLeft, Search, Filter, ArrowUpRight, ArrowDownLeft, X, DollarSign, Wallet } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
+import { formatCurrency } from '@/lib/formatters';
+import { toast } from 'sonner';
 
 interface Movimiento {
   id: string;
@@ -53,13 +55,7 @@ export default function CajaPage() {
 
   const queryClient = useQueryClient();
 
-  const { data: session } = useQuery({
-    queryKey: ["session"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      return user;
-    },
-  });
+  const { data: session } = useAuth();
 
   const { data: capital = { capital_disponible: 0 } } = useQuery({
     queryKey: ["capital", session?.id],
@@ -130,16 +126,6 @@ export default function CajaPage() {
       .filter((m) => m.tipo === "salida")
       .reduce((sum, m) => sum + m.monto, 0),
   };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-NI", {
-      style: "currency",
-      currency: "NIO",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("es-MX", {
       day: "2-digit",

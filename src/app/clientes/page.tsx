@@ -2,22 +2,17 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase/client";
+
 import DashboardLayout from "@/components/DashboardLayout";
 import { Search, UserPlus, Phone } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import { clienteService } from "@/services/databaseService";
 
 export default function ClientesPage() {
   const [search, setSearch] = useState("");
 
-  const { data: session } = useQuery({
-    queryKey: ["session"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      return user;
-    },
-  });
+  const { data: session } = useAuth();
 
   const { data: clientes = [], isLoading: loading } = useQuery({
     queryKey: ["clientes", session?.id],

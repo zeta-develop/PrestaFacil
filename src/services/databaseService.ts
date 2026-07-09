@@ -280,7 +280,7 @@ export const moraService = {
       return dbMoras;
     }
 
-    return await this.calculateMorasAlVuelo(userId, false);
+    return await this.calculateMorasAlVuelo(userId);
   },
 
   async getPendientes(userId: string) {
@@ -297,10 +297,10 @@ export const moraService = {
       return dbMoras;
     }
 
-    return await this.calculateMorasAlVuelo(userId, true);
+    return await this.calculateMorasAlVuelo(userId);
   },
 
-  async calculateMorasAlVuelo(userId: string, soloPendientes: boolean) {
+  async calculateMorasAlVuelo(userId: string) {
     const { data: prestamos, error } = await supabase
       .from("prestamos")
       .select("*, clientes(*)")
@@ -310,7 +310,7 @@ export const moraService = {
     if (error) throw error;
     if (!prestamos) return [];
 
-    const morasCalculadas: any[] = [];
+    const morasCalculadas = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 

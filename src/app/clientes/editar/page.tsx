@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase/client";
 import { ArrowLeft, User, Phone, MapPin, Activity } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import { clienteService } from "@/services/databaseService";
 
 function ClientesEditarContent() {
@@ -23,13 +24,7 @@ function ClientesEditarContent() {
     estado: "activo" as "activo" | "inactivo",
   });
 
-  const { data: session } = useQuery({
-    queryKey: ["session"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      return user;
-    },
-  });
+  const { data: session } = useAuth();
 
   const { isLoading: loading } = useQuery({
     queryKey: ["cliente-editar", id, session?.id],

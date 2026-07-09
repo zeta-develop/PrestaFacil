@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo } from 'react';
 import Link from "next/link";
-import { supabase } from "@/lib/supabase/client";
+import { supabase } from '@/lib/supabase/client';
 import DashboardLayout from "@/components/DashboardLayout";
-import { ArrowLeft, Search, Calendar, DollarSign, User, Filter, ChevronRight, Eye } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft, Search, Filter, ChevronRight } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
+import { formatCurrency } from '@/lib/formatters';
 
 interface Prestamo {
   id: string;
@@ -33,13 +35,7 @@ export default function PrestamosPage() {
   const [fechaFin, setFechaFin] = useState("");
   const [showFilters, setShowFilters] = useState(false);
 
-  const { data: session } = useQuery({
-    queryKey: ["session"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      return user;
-    },
-  });
+  const { data: session } = useAuth();
 
   const { data: prestamos = [], isLoading: loading } = useQuery({
     queryKey: ["prestamos", session?.id],
@@ -88,16 +84,6 @@ export default function PrestamosPage() {
       return true;
     });
   }, [prestamos, estadoFiltro, search, fechaInicio, fechaFin]);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-NI", {
-      style: "currency",
-      currency: "NIO",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  };
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("es-MX", {
       day: "2-digit",
