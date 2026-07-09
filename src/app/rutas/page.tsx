@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { supabase } from "@/lib/supabase/client";
+import { useState } from 'react';
+import { supabase } from '@/lib/supabase/client';
 import DashboardLayout from "@/components/DashboardLayout";
-import { MapPin, Wallet, Calendar, DollarSign, Phone, Activity } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { MapPin, Wallet, DollarSign, Phone, Activity } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 import Link from "next/link";
 
 interface Cliente {
@@ -44,13 +45,7 @@ export default function RutasInteligentesPage() {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: session } = useQuery({
-    queryKey: ["session"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      return user;
-    },
-  });
+  const { data: session } = useAuth();
 
   const { data: prestamos, isLoading } = useQuery({
     queryKey: ["rutasDiarias"],

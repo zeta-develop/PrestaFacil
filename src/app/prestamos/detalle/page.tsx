@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { ArrowLeft, Wallet, Calendar, Plus, Activity, DollarSign, Share2, Printer, FileText } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { jsPDF } from "jspdf";
 
@@ -257,7 +258,7 @@ function generatePDFDoc(prestamo: Prestamo) {
   }
 
   // Pie de página en todas las páginas (o solo la última)
-  const pageCount = (doc as any).internal.getNumberOfPages();
+  const pageCount = (doc as unknown as { internal: { getNumberOfPages: () => number } }).internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     doc.setDrawColor(228, 228, 231);
@@ -286,13 +287,7 @@ function PrestamoDetalleContent() {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: session } = useQuery({
-    queryKey: ["session"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      return user;
-    },
-  });
+  const { data: session } = useAuth();
 
   const { data: prestamo, isLoading: loading } = useQuery({
     queryKey: ["prestamo", id],

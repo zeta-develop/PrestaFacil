@@ -49,7 +49,7 @@ export default function ProtectedRoute({
     });
 
     return () => subscription.unsubscribe();
-  }, [router]);
+  }, [router, queryClient]);
 
   if (loading) {
     return (

@@ -1,20 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { supabase } from "@/lib/supabase/client";
+
 import DashboardLayout from "@/components/DashboardLayout";
 import { Wallet, TrendingUp, ArrowUpRight, ArrowDownRight, Plus, RefreshCw, Receipt, BarChart3, Briefcase, Users, DollarSign, Map, User, AlertTriangle } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { formatCurrency } from "@/lib/formatters";
+import { useAuth } from "@/hooks/useAuth";
 import { dashboardService } from "@/services/databaseService";
 
 export default function Home() {
-  const { data: session } = useQuery({
-    queryKey: ["session"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      return user;
-    },
-  });
+  const { data: session } = useAuth();
 
   const { data: config, isLoading: loading } = useQuery({
     queryKey: ["dashboardData", session?.id],
@@ -30,16 +26,6 @@ export default function Home() {
   };
 
   const greeting = getGreeting();
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-NI", {
-      style: "currency",
-      currency: "NIO",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  };
-
   const fullName = session?.user_metadata?.full_name || session?.email?.split("@")[0] || "Usuario";
 
   if (loading) {

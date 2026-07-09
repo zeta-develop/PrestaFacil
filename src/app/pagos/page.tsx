@@ -4,8 +4,9 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
-import { ArrowLeft, Search, Calendar, DollarSign, User, Filter, ChevronRight, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Search, Filter, ChevronRight, CheckCircle2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { formatCurrency } from "@/lib/formatters";
 
 interface Pago {
   id: string;
@@ -86,26 +87,6 @@ export default function PagosPage() {
       return true;
     });
   }, [pagos, search, fechaInicio, fechaFin]);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-NI", {
-      style: "currency",
-      currency: "NIO",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("es-MX", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   const formatDateOnly = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("es-MX", {
       day: "2-digit",

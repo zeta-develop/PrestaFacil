@@ -5,14 +5,11 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import CustomSelect from "@/components/CustomSelect";
 import { ArrowLeft, Calculator, User, DollarSign, Calendar, AlertCircle, CheckCircle2 } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { CapitalConfig } from "@/types/database";
 
-interface Cliente {
-  id: string;
-  nombre: string;
-}
 
 interface Prestamo {
   id: string;
@@ -21,9 +18,9 @@ interface Prestamo {
 
 export default function NuevoPrestamoPage() {
   const router = useRouter();
+  const { data: session } = useAuth();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
-  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [deudasActivas, setDeudasActivas] = useState<number>(0);
   const [prestamosPendientes, setPrestamosPendientes] = useState<Prestamo[]>([]);
   const [descontarDeuda, setDescontarDeuda] = useState(false);
@@ -46,21 +43,20 @@ export default function NuevoPrestamoPage() {
   const totalPagar = montoNeto + (montoNeto * (interes / 100));
   const cuotaMonto = totalPagar / cuotas;
 
-  useEffect(() => {
-    const fetchClientes = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
+  const { data: clientesQuery = [] } = useQuery({
+    queryKey: ["clientes", session?.id],
+    enabled: !!session?.id,
+    queryFn: async () => {
       const { data } = await supabase
         .from("clientes")
         .select("id, nombre")
-        .eq("user_id", user.id)
+        .eq("user_id", session!.id)
         .order("nombre");
-      
-      if (data) setClientes(data);
-    };
-    fetchClientes();
-  }, []);
+      return data || [];
+    }
+  });
+
+  const clientes = clientesQuery;
 
   // Obtener deudas activas cuando se selecciona cliente
   useEffect(() => {
@@ -72,13 +68,13 @@ export default function NuevoPrestamoPage() {
         return;
       }
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!session) return;
+
 
       const { data, error } = await supabase
         .from("prestamos")
         .select("id, saldo_pendiente")
-        .eq("user_id", user.id)
+        .eq("user_id", session.id)
         .eq("cliente_id", formData.cliente_id)
         .eq("estado", "activo");
 
@@ -99,7 +95,7 @@ export default function NuevoPrestamoPage() {
     };
 
     fetchDeudasActivas();
-  }, [formData.cliente_id]);
+  }, [formData.cliente_id, session]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,14 +112,14 @@ export default function NuevoPrestamoPage() {
 
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!session) return;
+
 
       // Obtener el config de capital actual
       const { data: configData } = await supabase
         .from("capital_config")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", session.id)
         .single();
 
       // Si se descuenta deuda, primero pagar los préstamos pendientes
@@ -160,7 +156,7 @@ export default function NuevoPrestamoPage() {
 
           // Crear registro de pago
           await supabase.from("pagos").insert({
-            user_id: user.id,
+            user_id: session.id,
             prestamo_id: prestamoAnterior.id,
             monto_pagado: montoADescontar,
             capital_abonado: capitalAbonado,
@@ -193,7 +189,7 @@ export default function NuevoPrestamoPage() {
 
       // Create loan matching the exact schema
       const { error: loanError } = await supabase.from("prestamos").insert({
-        user_id: user.id,
+        user_id: session.id,
         cliente_id: formData.cliente_id,
         monto: montoNeto,
         porcentaje_interes: interes,
@@ -229,7 +225,7 @@ export default function NuevoPrestamoPage() {
             total_recuperado: nuevoTotalRecuperado,
             total_prestado: nuevoTotalPrestado
           })
-          .eq("user_id", user.id);
+          .eq("user_id", session.id);
 
         if (updateError) {
           console.error("Error updating capital_config:", updateError);
@@ -237,7 +233,7 @@ export default function NuevoPrestamoPage() {
         }
 
         // Actualizar el caché de React Query INMEDIATAMENTE
-        queryClient.setQueryData(["dashboardData", user.id], (old: CapitalConfig | undefined) => {
+        queryClient.setQueryData(["dashboardData", session.id], (old: CapitalConfig | undefined) => {
           if (!old) return old;
           return {
             ...old,

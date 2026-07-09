@@ -6,6 +6,8 @@ import { supabase } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { ArrowLeft, ChevronLeft, ChevronRight, TrendingUp, DollarSign, Wallet, Zap } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { formatCurrency } from "@/lib/formatters";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Pago {
   id: string;
@@ -37,13 +39,7 @@ export default function ReportesPage() {
   const [mesSeleccionado, setMesSeleccionado] = useState<number>(new Date().getMonth());
   const [anioSeleccionado, setAnioSeleccionado] = useState<number>(new Date().getFullYear());
 
-  const { data: session } = useQuery({
-    queryKey: ["session"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      return user;
-    },
-  });
+  const { data: session } = useAuth();
 
   const { data: config } = useQuery({
     queryKey: ["capital-config-reportes", session?.id],
@@ -142,16 +138,6 @@ export default function ReportesPage() {
       cantidadPagos: datosAnioActual.reduce((sum, d) => sum + d.cantidadPagos, 0),
     };
   }, [datosAnioActual]);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-NI", {
-      style: "currency",
-      currency: "NIO",
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  };
-
   const handleMesAnterior = () => {
     if (mesSeleccionado === 0) {
       setMesSeleccionado(11);

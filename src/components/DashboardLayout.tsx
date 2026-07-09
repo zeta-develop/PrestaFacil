@@ -119,7 +119,7 @@ export default function DashboardLayout({
 
   // Rotación del icono mientras arrastras o refrescas
   const rotation = refreshing ? "animate-spin" : "";
-  const progressPercent = Math.min((pullDistance / PULL_THRESHOLD) * 100, 100);
+
 
   return (
     <ProtectedRoute>

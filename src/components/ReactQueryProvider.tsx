@@ -9,7 +9,7 @@ export function ReactQueryProvider({ children }: { children: React.ReactNode }) 
       new QueryClient({
         defaultOptions: {
           queries: {
-            gcTime: 1000 * 60 * 60 * 24, // 24 hours caching in memory
+            gcTime: 1000 * 60 * 60, // 1 hour caching in memory (reduced from 24h to avoid memory issues) // 24 hours caching in memory
             staleTime: 1000 * 60 * 5, // Data is fresh for 5 minutes
             retry: 2,
             refetchOnWindowFocus: false, // Optimización crítica: Evitar peticiones masivas al enfocar la app en móvil

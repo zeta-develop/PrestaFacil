@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase/client";
+
 import DashboardLayout from "@/components/DashboardLayout";
 import { Search, AlertTriangle, Calendar, Clock, DollarSign, Receipt, ArrowLeft } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { formatCurrency } from "@/lib/formatters";
+import { useAuth } from "@/hooks/useAuth";
 import { moraService } from "@/services/databaseService";
 
 interface MoraConRelaciones {
@@ -37,13 +39,7 @@ export default function MorasPage() {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<"pendiente" | "todas">("pendiente");
 
-  const { data: session } = useQuery({
-    queryKey: ["session"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      return user;
-    },
-  });
+  const { data: session } = useAuth();
 
   const { data: moras = [], isLoading: loading } = useQuery<MoraConRelaciones[]>({
     queryKey: ["moras", activeTab, session?.id],
@@ -57,15 +53,6 @@ export default function MorasPage() {
   const filteredMoras = moras.filter((m) =>
     m.prestamos?.clientes?.nombre.toLowerCase().includes(search.toLowerCase())
   );
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-NI", {
-      style: "currency",
-      currency: "NIO",
-      minimumFractionDigits: 2,
-    }).format(amount);
-  };
-
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString("es-ES", {
       year: "numeric",

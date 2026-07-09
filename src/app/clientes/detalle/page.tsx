@@ -3,24 +3,19 @@
 import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase/client";
+
 import { ArrowLeft, Phone, MapPin, DollarSign, Activity } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import { clienteService } from "@/services/databaseService";
-import { Cliente } from "@/types/database";
+
 
 function ClienteDetalleContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
 
-  const { data: session } = useQuery({
-    queryKey: ["session"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      return user;
-    },
-  });
+  const { data: session } = useAuth();
 
   const { data: cliente, isLoading: loading } = useQuery({
     queryKey: ["cliente", id, session?.id],
