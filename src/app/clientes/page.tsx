@@ -4,25 +4,32 @@ import { useState } from "react";
 import Link from "next/link";
 
 import DashboardLayout from "@/components/DashboardLayout";
-import { Search, UserPlus, Phone } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { Search, UserPlus, Phone, ChevronLeft, ChevronRight } from "lucide-react";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { clienteService } from "@/services/databaseService";
+import { useDebounce } from "@/hooks/useDebounce";
 
 export default function ClientesPage() {
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
+  const debouncedSearch = useDebounce(search, 500);
 
   const { data: session } = useAuth();
 
-  const { data: clientes = [], isLoading: loading } = useQuery({
-    queryKey: ["clientes", session?.id],
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ["clientes", session?.id, debouncedSearch, page],
     enabled: !!session?.id,
-    queryFn: () => clienteService.getAll(session!.id),
+    queryFn: () => clienteService.getPaginated(session!.id, debouncedSearch, page, pageSize),
+    placeholderData: keepPreviousData,
   });
 
-  const filteredClientes = clientes.filter((c) =>
-    c.nombre.toLowerCase().includes(search.toLowerCase())
-  );
+  const clientes = data?.data || [];
+  const totalCount = data?.count || 0;
+  const totalPages = Math.ceil(totalCount / pageSize);
+
 
   return (
     <DashboardLayout>
@@ -39,7 +46,10 @@ export default function ClientesPage() {
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1); // Reset page on search change
+            }}
             placeholder="Buscar por nombre..."
             className="w-full pl-11 pr-4 py-3.5 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none transition-all text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 backdrop-blur-md shadow-sm dark:shadow-none"
           />
@@ -51,13 +61,14 @@ export default function ClientesPage() {
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-teal-500 border-t-transparent"></div>
           </div>
         ) : (
-          <div className="space-y-3">
-            {filteredClientes.length === 0 ? (
+          <div className="space-y-3 pb-20">
+            {clientes.length === 0 ? (
               <div className="text-center py-10 text-zinc-500">
                 <p>No se encontraron clientes.</p>
               </div>
             ) : (
-              filteredClientes.map((cliente) => (
+              <>
+              {clientes.map((cliente) => (
                 <Link
                   href={`/clientes/detalle?id=${cliente.id}`}
                   key={cliente.id}
@@ -113,7 +124,35 @@ export default function ClientesPage() {
                     </div>
                   )}
                 </Link>
-              ))
+              ))}
+
+              {/* Paginación */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-4 pb-2 border-t border-zinc-200 dark:border-white/10 mt-6">
+                  <button
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-zinc-50 dark:hover:bg-white/10 transition-colors"
+                  >
+                    <ChevronLeft size={16} />
+                    Anterior
+                  </button>
+
+                  <div className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">
+                    Página {page} de {totalPages}
+                  </div>
+
+                  <button
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-zinc-50 dark:hover:bg-white/10 transition-colors"
+                  >
+                    Siguiente
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              )}
+              </>
             )}
           </div>
         )}
