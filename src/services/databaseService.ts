@@ -13,6 +13,30 @@ export const clienteService = {
     return data as Cliente[];
   },
 
+  async getPaginated(userId: string, search: string = "", page: number = 1, pageSize: number = 20) {
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    let query = supabase
+      .from("clientes")
+      .select("*, prestamos(*)", { count: "exact" })
+      .eq("user_id", userId)
+      .order("nombre", { ascending: true })
+      .range(from, to);
+
+    if (search) {
+      query = query.ilike("nombre", `%${search}%`);
+    }
+
+    const { data, count, error } = await query;
+    if (error) throw error;
+
+    return {
+      data: data as Cliente[],
+      count: count || 0,
+    };
+  },
+
   async getById(id: string, userId: string) {
     const { data, error } = await supabase
       .from("clientes")
