@@ -74,7 +74,7 @@ export default function NuevoPrestamoPage() {
       const { data, error } = await supabase
         .from("prestamos")
         .select("id, saldo_pendiente")
-        .eq("user_id", session.id)
+        .eq("user_id", session!.id)
         .eq("cliente_id", formData.cliente_id)
         .eq("estado", "activo");
 
@@ -119,7 +119,7 @@ export default function NuevoPrestamoPage() {
       const { data: configData } = await supabase
         .from("capital_config")
         .select("*")
-        .eq("user_id", session.id)
+        .eq("user_id", session!.id)
         .single();
 
       // Si se descuenta deuda, primero pagar los préstamos pendientes
@@ -139,6 +139,7 @@ export default function NuevoPrestamoPage() {
             .from("prestamos")
             .select("*")
             .eq("id", prestamoAnterior.id)
+            .eq("user_id", session!.id)
             .single();
 
           if (!prestamoData) continue;
@@ -156,7 +157,7 @@ export default function NuevoPrestamoPage() {
 
           // Crear registro de pago
           await supabase.from("pagos").insert({
-            user_id: session.id,
+            user_id: session!.id,
             prestamo_id: prestamoAnterior.id,
             monto_pagado: montoADescontar,
             capital_abonado: capitalAbonado,
@@ -178,7 +179,8 @@ export default function NuevoPrestamoPage() {
               interes_ganado: prestamoData.interes_ganado + interesPagado,
               estado: nuevoEstado
             })
-            .eq("id", prestamoAnterior.id);
+            .eq("id", prestamoAnterior.id)
+            .eq("user_id", session!.id);
 
           montoPorDescontar -= montoADescontar;
 
@@ -189,7 +191,7 @@ export default function NuevoPrestamoPage() {
 
       // Create loan matching the exact schema
       const { error: loanError } = await supabase.from("prestamos").insert({
-        user_id: session.id,
+        user_id: session!.id,
         cliente_id: formData.cliente_id,
         monto: montoNeto,
         porcentaje_interes: interes,
@@ -225,7 +227,7 @@ export default function NuevoPrestamoPage() {
             total_recuperado: nuevoTotalRecuperado,
             total_prestado: nuevoTotalPrestado
           })
-          .eq("user_id", session.id);
+          .eq("user_id", session!.id);
 
         if (updateError) {
           console.error("Error updating capital_config:", updateError);
@@ -233,7 +235,7 @@ export default function NuevoPrestamoPage() {
         }
 
         // Actualizar el caché de React Query INMEDIATAMENTE
-        queryClient.setQueryData(["dashboardData", session.id], (old: CapitalConfig | undefined) => {
+        queryClient.setQueryData(["dashboardData", session!.id], (old: CapitalConfig | undefined) => {
           if (!old) return old;
           return {
             ...old,
