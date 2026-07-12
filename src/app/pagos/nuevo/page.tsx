@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import CustomSelect from "@/components/CustomSelect";
 import { ArrowLeft, User, DollarSign } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Prestamo {
   id: string;
@@ -26,9 +27,9 @@ interface Prestamo {
 
 export default function NuevoPagoPage() {
   const router = useRouter();
+  const { data: session } = useAuth();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
-  const [prestamos, setPrestamos] = useState<Prestamo[]>([]);
   const [selectedPrestamo, setSelectedPrestamo] = useState<Prestamo | null>(null);
   
   const [formData, setFormData] = useState({
@@ -36,26 +37,23 @@ export default function NuevoPagoPage() {
     monto_pagado: "",
   });
 
-  useEffect(() => {
-    const fetchPrestamos = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data } = await supabase
+  const { data: prestamos = [] } = useQuery({
+    queryKey: ["prestamos_activos", session?.id],
+    enabled: !!session?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from("prestamos")
         .select(`
           *,
           clientes ( nombre )
         `)
-        .eq("user_id", user.id)
+        .eq("user_id", session!.id)
         .eq("estado", "activo");
       
-      if (data) {
-        setPrestamos(data as unknown as Prestamo[]);
-      }
-    };
-    fetchPrestamos();
-  }, []);
+      if (error) throw error;
+      return (data || []) as unknown as Prestamo[];
+    }
+  });
 
   const handlePrestamoSelect = (prestamoId: string) => {
     const p = prestamos.find(x => x.id === prestamoId);

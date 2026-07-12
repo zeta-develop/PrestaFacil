@@ -8,16 +8,20 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { App } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
+import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import { useRef } from "react";
 
 export default function PerfilPage() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  const [loading, setLoading] = useState(true);
+  const { data: session } = useAuth();
+
   const [saving, setSaving] = useState(false);
-  const [userInfo, setUserInfo] = useState<{ email: string; name: string } | null>(null);
-  const [capital, setCapital] = useState("");
-  const [diaCorte, setDiaCorte] = useState("1");
   const [appVersion, setAppVersion] = useState("0.2.0");
+
+  const capitalRef = useRef<HTMLInputElement>(null);
+  const diaCorteRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const getVersion = async () => {
@@ -33,36 +37,29 @@ export default function PerfilPage() {
     getVersion();
   }, []);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+  const { data: profileConfig, isLoading: loading } = useQuery({
+    queryKey: ["perfil_config", session?.id],
+    enabled: !!session?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("capital_config")
+        .select("capital_inicial, dia_corte_kpi")
+        .eq("user_id", session!.id)
+        .single();
 
-        setUserInfo({
-          email: user.email || "",
-          name: user.user_metadata?.full_name || user.email?.split("@")[0] || "Usuario",
-        });
-
-        const { data } = await supabase
-          .from("capital_config")
-          .select("capital_inicial, dia_corte_kpi")
-          .eq("user_id", user.id)
-          .single();
-
-        if (data) {
-          setCapital(String(data.capital_inicial ?? 0));
-          setDiaCorte(String(data.dia_corte_kpi ?? 1));
-        }
-      } catch (error) {
+      if (error) {
         console.error("Error fetching profile:", error);
-      } finally {
-        setLoading(false);
+        return null;
       }
-    };
 
-    fetchProfile();
-  }, []);
+      return data;
+    }
+  });
+
+  const userInfo = session ? {
+    email: session.email || "",
+    name: session.user_metadata?.full_name || session.email?.split("@")[0] || "Usuario",
+  } : null;
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -75,8 +72,10 @@ export default function PerfilPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const numCapital = parseFloat(capital) || 0;
-      const numDiaCorte = parseInt(diaCorte) || 1;
+      // Use refs to get values since uncontrolled components don't re-render on edit,
+      // preventing re-render cascading while also allowing standard UI pattern
+      const numCapital = parseFloat(capitalRef.current?.value || "0");
+      const numDiaCorte = parseInt(diaCorteRef.current?.value || "1");
 
       if (numDiaCorte < 1 || numDiaCorte > 28) {
         alert("El día de corte debe estar entre 1 y 28");
@@ -168,9 +167,10 @@ export default function PerfilPage() {
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest pl-1">Capital Inicial</label>
                     <input
+                      ref={capitalRef}
                       type="number"
-                      value={capital}
-                      onChange={(e) => setCapital(e.target.value)}
+                      key={loading ? 'loading-cap' : 'ready-cap'} // only remount once when loading finishes
+                      defaultValue={profileConfig?.capital_inicial ?? ""}
                       placeholder="Ej. 18000"
                       className="w-full px-4 py-3.5 bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none text-zinc-900 dark:text-white transition-all backdrop-blur-sm"
                     />
@@ -179,11 +179,12 @@ export default function PerfilPage() {
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest pl-1">Día de Corte Mensual (1 al 28)</label>
                     <input
+                      ref={diaCorteRef}
                       type="number"
                       min="1"
                       max="28"
-                      value={diaCorte}
-                      onChange={(e) => setDiaCorte(e.target.value)}
+                      key={loading ? 'loading-dia' : 'ready-dia'}
+                      defaultValue={profileConfig?.dia_corte_kpi ?? "1"}
                       placeholder="Ej. 23"
                       className="w-full px-4 py-3.5 bg-zinc-50 dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none text-zinc-900 dark:text-white transition-all backdrop-blur-sm"
                     />
