@@ -7,6 +7,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import { ArrowLeft, Search, Filter, ChevronRight, CheckCircle2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { formatCurrency } from "@/lib/formatters";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Pago {
   id: string;
@@ -32,13 +33,7 @@ export default function PagosPage() {
   const [fechaFin, setFechaFin] = useState("");
   const [showFilters, setShowFilters] = useState(false);
 
-  const { data: session } = useQuery({
-    queryKey: ["session"],
-    queryFn: async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      return user;
-    },
-  });
+  const { data: session } = useAuth();
 
   const { data: pagos = [], isLoading: loading } = useQuery({
     queryKey: ["pagos", session?.id],

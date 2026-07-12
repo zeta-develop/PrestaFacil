@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import CustomSelect from "@/components/CustomSelect";
 import { ArrowLeft, User, DollarSign } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Prestamo {
   id: string;
@@ -27,8 +28,8 @@ interface Prestamo {
 export default function NuevoPagoPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { data: session } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [prestamos, setPrestamos] = useState<Prestamo[]>([]);
   const [selectedPrestamo, setSelectedPrestamo] = useState<Prestamo | null>(null);
   
   const [formData, setFormData] = useState({
@@ -36,26 +37,22 @@ export default function NuevoPagoPage() {
     monto_pagado: "",
   });
 
-  useEffect(() => {
-    const fetchPrestamos = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
+  const { data: prestamos = [] } = useQuery({
+    queryKey: ["prestamos-activos", session?.id],
+    enabled: !!session?.id,
+    queryFn: async () => {
       const { data } = await supabase
         .from("prestamos")
         .select(`
           *,
           clientes ( nombre )
         `)
-        .eq("user_id", user.id)
+        .eq("user_id", session!.id)
         .eq("estado", "activo");
       
-      if (data) {
-        setPrestamos(data as unknown as Prestamo[]);
-      }
-    };
-    fetchPrestamos();
-  }, []);
+      return (data as unknown as Prestamo[]) || [];
+    }
+  });
 
   const handlePrestamoSelect = (prestamoId: string) => {
     const p = prestamos.find(x => x.id === prestamoId);
@@ -81,8 +78,7 @@ export default function NuevoPagoPage() {
 
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!session) return;
 
       // 1. Matemáticas Proporcionales
       const proporcionCapital = selectedPrestamo.monto / selectedPrestamo.total_a_pagar;
@@ -97,7 +93,7 @@ export default function NuevoPagoPage() {
 
       // 2. Insertar Pago
       const { error: pagoError } = await supabase.from("pagos").insert({
-        user_id: user.id,
+        user_id: session.id,
         prestamo_id: selectedPrestamo.id,
         monto_pagado: montoPago,
         capital_abonado: capitalAbonado,
@@ -126,7 +122,7 @@ export default function NuevoPagoPage() {
       const { data: configData } = await supabase
         .from("capital_config")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", session.id)
         .single();
 
       if (configData) {
@@ -138,7 +134,7 @@ export default function NuevoPagoPage() {
             ganancia_total: Number(configData.ganancia_total) + interesPagado,
             total_recuperado: Number(configData.total_recuperado) + capitalAbonado
           })
-          .eq("user_id", user.id);
+          .eq("user_id", session.id);
         
         if (configError) console.error("Error updating capital_config:", configError);
       }

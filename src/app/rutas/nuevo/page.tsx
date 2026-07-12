@@ -7,10 +7,12 @@ import CustomSelect from "@/components/CustomSelect";
 import { ArrowLeft, MapPin, Calendar, AlignLeft } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function NuevaRutaPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { data: session } = useAuth();
   const [loading, setLoading] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -30,11 +32,10 @@ export default function NuevaRutaPage() {
 
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!session) return;
 
       const { error } = await supabase.from("rutas_cobro").insert({
-        user_id: user.id,
+        user_id: session.id,
         nombre: formData.nombre,
         descripcion: formData.descripcion,
         dia_semana: formData.dia_semana,

@@ -8,10 +8,12 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { App } from "@capacitor/app";
 import { Capacitor } from "@capacitor/core";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function PerfilPage() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const { data: session } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [userInfo, setUserInfo] = useState<{ email: string; name: string } | null>(null);
@@ -36,18 +38,17 @@ export default function PerfilPage() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!session) return;
 
         setUserInfo({
-          email: user.email || "",
-          name: user.user_metadata?.full_name || user.email?.split("@")[0] || "Usuario",
+          email: session.email || "",
+          name: session.user_metadata?.full_name || session.email?.split("@")[0] || "Usuario",
         });
 
         const { data } = await supabase
           .from("capital_config")
           .select("capital_inicial, dia_corte_kpi")
-          .eq("user_id", user.id)
+          .eq("user_id", session.id)
           .single();
 
         if (data) {
@@ -62,7 +63,7 @@ export default function PerfilPage() {
     };
 
     fetchProfile();
-  }, []);
+  }, [session]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -72,8 +73,7 @@ export default function PerfilPage() {
   const handleSaveCapital = async () => {
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!session) return;
 
       const numCapital = parseFloat(capital) || 0;
       const numDiaCorte = parseInt(diaCorte) || 1;
@@ -88,7 +88,7 @@ export default function PerfilPage() {
       const { data: existing } = await supabase
         .from("capital_config")
         .select("id")
-        .eq("user_id", user.id)
+        .eq("user_id", session.id)
         .single();
 
       if (existing) {
@@ -103,7 +103,7 @@ export default function PerfilPage() {
         await supabase
           .from("capital_config")
           .insert({
-            user_id: user.id,
+            user_id: session.id,
             capital_inicial: numCapital,
             capital_disponible: 0,
             dia_corte_kpi: numDiaCorte
