@@ -274,6 +274,163 @@ async function checkAndPerformKPICut(config: CapitalConfig, userId: string): Pro
   }
 }
 
+
+export const prestamoService = {
+  async getPaginated(userId: string, search: string = "", estadoFiltro: string, fechaInicio: string, fechaFin: string, page: number = 1, pageSize: number = 10) {
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    let query = supabase
+      .from("prestamos")
+      .select(`*, clientes!inner(nombre)`, { count: "exact" })
+      .eq("user_id", userId)
+      .order("fecha_inicio", { ascending: false });
+
+    if (estadoFiltro !== "todos") {
+      query = query.eq("estado", estadoFiltro);
+    }
+
+    if (fechaInicio) {
+      query = query.gte("fecha_inicio", fechaInicio);
+    }
+    if (fechaFin) {
+      query = query.lte("fecha_inicio", fechaFin);
+    }
+
+    if (search) {
+      query = query.ilike("clientes.nombre", `%${search}%`);
+    }
+
+    query = query.range(from, to);
+
+    const { data, count, error } = await query;
+    if (error) throw error;
+
+    return {
+      data,
+      count
+    };
+  },
+
+  async getStats(userId: string, estadoFiltro: string, fechaInicio: string, fechaFin: string, search: string) {
+    let query = supabase
+      .from("prestamos")
+      .select("estado, saldo_pendiente, clientes!inner(nombre)")
+      .eq("user_id", userId);
+
+    if (estadoFiltro !== "todos") {
+      query = query.eq("estado", estadoFiltro);
+    }
+
+    if (fechaInicio) {
+      query = query.gte("fecha_inicio", fechaInicio);
+    }
+    if (fechaFin) {
+      query = query.lte("fecha_inicio", fechaFin);
+    }
+
+    if (search) {
+      query = query.ilike("clientes.nombre", `%${search}%`);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    let activos = 0;
+    let pagados = 0;
+    let montoPendiente = 0;
+
+    if (data) {
+        data.forEach(p => {
+            if (p.estado === 'activo') activos++;
+            if (p.estado === 'pagado') pagados++;
+            montoPendiente += Number(p.saldo_pendiente) || 0;
+        });
+    }
+
+    return {
+      total: data ? data.length : 0,
+      activos,
+      pagados,
+      montoPendiente
+    };
+  }
+};
+
+export const pagoService = {
+  async getPaginated(userId: string, search: string = "", fechaInicio: string, fechaFin: string, page: number = 1, pageSize: number = 10) {
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    let query = supabase
+      .from("pagos")
+      .select(`*, prestamos!inner(id, cliente_id, clientes!inner(nombre))`, { count: "exact" })
+      .eq("user_id", userId)
+      .order("fecha_pago", { ascending: false });
+
+    if (fechaInicio) {
+      query = query.gte("fecha_pago", fechaInicio + "T00:00:00.000Z");
+    }
+    if (fechaFin) {
+      query = query.lte("fecha_pago", fechaFin + "T23:59:59.999Z");
+    }
+
+    if (search) {
+      query = query.ilike("prestamos.clientes.nombre", `%${search}%`);
+    }
+
+    query = query.range(from, to);
+
+    const { data, count, error } = await query;
+    if (error) throw error;
+
+    return {
+      data,
+      count
+    };
+  },
+
+  async getStats(userId: string, search: string, fechaInicio: string, fechaFin: string) {
+    let query = supabase
+      .from("pagos")
+      .select(`monto_pagado, capital_abonado, interes_pagado, prestamos!inner(clientes!inner(nombre))`)
+      .eq("user_id", userId);
+
+    if (fechaInicio) {
+      query = query.gte("fecha_pago", fechaInicio + "T00:00:00.000Z");
+    }
+    if (fechaFin) {
+      query = query.lte("fecha_pago", fechaFin + "T23:59:59.999Z");
+    }
+
+    if (search) {
+      query = query.ilike("prestamos.clientes.nombre", `%${search}%`);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    let totalMonto = 0;
+    let totalCapital = 0;
+    let totalInteres = 0;
+
+    if (data) {
+        data.forEach(p => {
+            totalMonto += Number(p.monto_pagado) || 0;
+            totalCapital += Number(p.capital_abonado) || 0;
+            totalInteres += Number(p.interes_pagado) || 0;
+        });
+    }
+
+    return {
+        total: data ? data.length : 0,
+        totalMonto,
+        totalCapital,
+        totalInteres
+    };
+  }
+};
+
 export const dashboardService = {
   async getStats(userId: string) {
     const { data, error } = await supabase

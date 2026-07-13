@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
-import { ArrowLeft, Search, Filter, ChevronRight, CheckCircle2 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft, Search, Filter, ChevronRight, ChevronLeft, CheckCircle2 } from "lucide-react";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { useDebounce } from '@/hooks/useDebounce';
+import { pagoService } from '@/services/databaseService';
 import { formatCurrency } from "@/lib/formatters";
 import { useAuth } from "@/hooks/useAuth";
+
 
 interface Pago {
   id: string;
@@ -17,7 +19,7 @@ interface Pago {
   interes_pagado: number;
   numero_cuota: number;
   fecha_pago: string;
-  metodo_pago: string;
+  metodo_pago?: string;
   prestamos: {
     id: string;
     cliente_id: string;
@@ -32,56 +34,29 @@ export default function PagosPage() {
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaFin, setFechaFin] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const debouncedSearch = useDebounce(search, 500);
 
   const { data: session } = useAuth();
 
-  const { data: pagos = [], isLoading: loading } = useQuery({
-    queryKey: ["pagos", session?.id],
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ["pagos-paginated", session?.id, debouncedSearch, fechaInicio, fechaFin, page],
     enabled: !!session?.id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("pagos")
-        .select(`
-          *,
-          prestamos (
-            id,
-            cliente_id,
-            clientes ( nombre )
-          )
-        `)
-        .eq("user_id", session!.id)
-        .order("fecha_pago", { ascending: false });
-
-      if (error) throw error;
-      return data as Pago[];
-    },
+    queryFn: () => pagoService.getPaginated(session!.id, debouncedSearch, fechaInicio, fechaFin, page, pageSize),
+    placeholderData: keepPreviousData,
   });
 
-  // Filtrar pagos
-  const pagosFiltrados = useMemo(() => {
-    return pagos.filter((p) => {
-      // Filtro por búsqueda (cliente)
-      if (search && !p.prestamos.clientes.nombre.toLowerCase().includes(search.toLowerCase())) {
-        return false;
-      }
+  const { data: statsData } = useQuery({
+    queryKey: ["pagos-stats", session?.id, debouncedSearch, fechaInicio, fechaFin],
+    enabled: !!session?.id,
+    queryFn: () => pagoService.getStats(session!.id, debouncedSearch, fechaInicio, fechaFin),
+  });
 
-      // Filtro por rango de fechas
-      if (fechaInicio) {
-        const inicio = new Date(fechaInicio);
-        const pagoInicio = new Date(p.fecha_pago);
-        if (pagoInicio < inicio) return false;
-      }
+  const pagosFiltrados = (data?.data as unknown as Pago[]) || [];
+  const totalCount = data?.count || 0;
+  const totalPages = Math.ceil(totalCount / pageSize);
 
-      if (fechaFin) {
-        const fin = new Date(fechaFin);
-        fin.setHours(23, 59, 59, 999); // Incluir todo el día
-        const pagoFin = new Date(p.fecha_pago);
-        if (pagoFin > fin) return false;
-      }
-
-      return true;
-    });
-  }, [pagos, search, fechaInicio, fechaFin]);
   const formatDateOnly = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("es-MX", {
       day: "2-digit",
@@ -91,11 +66,11 @@ export default function PagosPage() {
   };
 
   // Estadísticas
-  const stats = {
-    total: pagosFiltrados.length,
-    totalMonto: pagosFiltrados.reduce((sum, p) => sum + p.monto_pagado, 0),
-    totalCapital: pagosFiltrados.reduce((sum, p) => sum + p.capital_abonado, 0),
-    totalInteres: pagosFiltrados.reduce((sum, p) => sum + p.interes_pagado, 0),
+  const stats = statsData || {
+    total: 0,
+    totalMonto: 0,
+    totalCapital: 0,
+    totalInteres: 0,
   };
 
   return (
@@ -129,13 +104,13 @@ export default function PagosPage() {
                 <input
                   type="date"
                   value={fechaInicio}
-                  onChange={(e) => setFechaInicio(e.target.value)}
+                  onChange={(e) => { setFechaInicio(e.target.value); setPage(1); }}
                   className="flex-1 px-3 py-2 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-lg text-xs focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none transition-all"
                 />
                 <input
                   type="date"
                   value={fechaFin}
-                  onChange={(e) => setFechaFin(e.target.value)}
+                  onChange={(e) => { setFechaFin(e.target.value); setPage(1); }}
                   className="flex-1 px-3 py-2 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-lg text-xs focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none transition-all"
                 />
               </div>
@@ -147,6 +122,7 @@ export default function PagosPage() {
                 onClick={() => {
                   setFechaInicio("");
                   setFechaFin("");
+                  setPage(1);
                 }}
                 className="w-full px-3 py-2 text-xs font-medium text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-500/10 rounded-lg transition-colors"
               >
@@ -164,7 +140,7 @@ export default function PagosPage() {
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="Buscar por cliente..."
             className="w-full pl-11 pr-4 py-3.5 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none transition-all text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 backdrop-blur-md shadow-sm dark:shadow-none"
           />
@@ -272,6 +248,33 @@ export default function PagosPage() {
                 </div>
               </Link>
             ))}
+          </div>
+        )}
+
+        {/* Paginación */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-4 pb-2 border-t border-zinc-200 dark:border-white/10 mt-6 relative z-10">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-zinc-50 dark:hover:bg-white/10 transition-colors"
+            >
+              <ChevronLeft size={16} />
+              Anterior
+            </button>
+
+            <div className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">
+              Página {page} de {totalPages}
+            </div>
+
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-zinc-50 dark:hover:bg-white/10 transition-colors"
+            >
+              Siguiente
+              <ChevronRight size={16} />
+            </button>
           </div>
         )}
       </main>
