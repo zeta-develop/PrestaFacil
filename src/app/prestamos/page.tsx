@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import Link from "next/link";
-import { supabase } from '@/lib/supabase/client';
 import DashboardLayout from "@/components/DashboardLayout";
-import { ArrowLeft, Search, Filter, ChevronRight } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { ArrowLeft, Search, Filter, ChevronRight, ChevronLeft } from 'lucide-react';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
+import { useDebounce } from '@/hooks/useDebounce';
+import { prestamoService } from '@/services/databaseService';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/formatters';
+
 
 interface Prestamo {
   id: string;
@@ -34,56 +36,30 @@ export default function PrestamosPage() {
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaFin, setFechaFin] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+  const debouncedSearch = useDebounce(search, 500);
 
   const { data: session } = useAuth();
 
-  const { data: prestamos = [], isLoading: loading } = useQuery({
-    queryKey: ["prestamos", session?.id],
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ["prestamos-paginated", session?.id, debouncedSearch, estadoFiltro, fechaInicio, fechaFin, page],
     enabled: !!session?.id,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("prestamos")
-        .select(`
-          *,
-          clientes ( nombre )
-        `)
-        .eq("user_id", session!.id)
-        .order("fecha_inicio", { ascending: false });
-
-      if (error) throw error;
-      return data as Prestamo[];
-    },
+    queryFn: () => prestamoService.getPaginated(session!.id, debouncedSearch, estadoFiltro, fechaInicio, fechaFin, page, pageSize),
+    placeholderData: keepPreviousData,
   });
 
-  // Filtrar préstamos
-  const prestamosFiltrados = useMemo(() => {
-    return prestamos.filter((p) => {
-      // Filtro por estado
-      if (estadoFiltro !== "todos" && p.estado !== estadoFiltro) {
-        return false;
-      }
+  const { data: statsData } = useQuery({
+    queryKey: ["prestamos-stats", session?.id, debouncedSearch, estadoFiltro, fechaInicio, fechaFin],
+    enabled: !!session?.id,
+    queryFn: () => prestamoService.getStats(session!.id, estadoFiltro, fechaInicio, fechaFin, debouncedSearch),
+  });
 
-      // Filtro por búsqueda (cliente)
-      if (search && !p.clientes.nombre.toLowerCase().includes(search.toLowerCase())) {
-        return false;
-      }
+  const prestamosFiltrados = (data?.data as unknown as Prestamo[]) || [];
+  const totalCount = data?.count || 0;
+  const totalPages = Math.ceil(totalCount / pageSize);
 
-      // Filtro por rango de fechas
-      if (fechaInicio) {
-        const inicio = new Date(fechaInicio);
-        const prestamInicio = new Date(p.fecha_inicio);
-        if (prestamInicio < inicio) return false;
-      }
 
-      if (fechaFin) {
-        const fin = new Date(fechaFin);
-        const prestamFin = new Date(p.fecha_inicio);
-        if (prestamFin > fin) return false;
-      }
-
-      return true;
-    });
-  }, [prestamos, estadoFiltro, search, fechaInicio, fechaFin]);
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("es-MX", {
       day: "2-digit",
@@ -103,11 +79,11 @@ export default function PrestamosPage() {
   };
 
   // Estadísticas
-  const stats = {
-    total: prestamosFiltrados.length,
-    activos: prestamosFiltrados.filter((p) => p.estado === "activo").length,
-    pagados: prestamosFiltrados.filter((p) => p.estado === "pagado").length,
-    montoPendiente: prestamosFiltrados.reduce((sum, p) => sum + p.saldo_pendiente, 0),
+  const stats = statsData || {
+    total: 0,
+    activos: 0,
+    pagados: 0,
+    montoPendiente: 0,
   };
 
   return (
@@ -141,7 +117,7 @@ export default function PrestamosPage() {
                 {["todos", "activo", "pagado"].map((estado) => (
                   <button
                     key={estado}
-                    onClick={() => setEstadoFiltro(estado as EstadoFiltro)}
+                    onClick={() => { setEstadoFiltro(estado as EstadoFiltro); setPage(1); }}
                     className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
                       estadoFiltro === estado
                         ? "bg-teal-600 text-white dark:bg-teal-500"
@@ -163,13 +139,13 @@ export default function PrestamosPage() {
                 <input
                   type="date"
                   value={fechaInicio}
-                  onChange={(e) => setFechaInicio(e.target.value)}
+                  onChange={(e) => { setFechaInicio(e.target.value); setPage(1); }}
                   className="flex-1 px-3 py-2 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-lg text-xs focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none transition-all"
                 />
                 <input
                   type="date"
                   value={fechaFin}
-                  onChange={(e) => setFechaFin(e.target.value)}
+                  onChange={(e) => { setFechaFin(e.target.value); setPage(1); }}
                   className="flex-1 px-3 py-2 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-lg text-xs focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none transition-all"
                 />
               </div>
@@ -181,6 +157,7 @@ export default function PrestamosPage() {
                 onClick={() => {
                   setFechaInicio("");
                   setFechaFin("");
+                  setPage(1);
                 }}
                 className="w-full px-3 py-2 text-xs font-medium text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-500/10 rounded-lg transition-colors"
               >
@@ -198,7 +175,7 @@ export default function PrestamosPage() {
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="Buscar por cliente..."
             className="w-full pl-11 pr-4 py-3.5 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-2xl focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500 outline-none transition-all text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 backdrop-blur-md shadow-sm dark:shadow-none"
           />
@@ -321,6 +298,33 @@ export default function PrestamosPage() {
                 </div>
               </Link>
             ))}
+          </div>
+        )}
+
+        {/* Paginación */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-4 pb-2 border-t border-zinc-200 dark:border-white/10 mt-6 relative z-10">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-zinc-50 dark:hover:bg-white/10 transition-colors"
+            >
+              <ChevronLeft size={16} />
+              Anterior
+            </button>
+
+            <div className="text-sm text-zinc-500 dark:text-zinc-400 font-medium">
+              Página {page} de {totalPages}
+            </div>
+
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-zinc-50 dark:hover:bg-white/10 transition-colors"
+            >
+              Siguiente
+              <ChevronRight size={16} />
+            </button>
           </div>
         )}
       </main>
