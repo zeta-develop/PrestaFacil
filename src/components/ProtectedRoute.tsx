@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import { AutoUpdater } from "./AutoUpdater";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function ProtectedRoute({
   children,
@@ -12,25 +13,17 @@ export default function ProtectedRoute({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
   const queryClient = useQueryClient();
+  const { data: session, isLoading } = useAuth();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      // getUser() is more secure as it revalidates the session with the server
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      
-      if (!user) {
-        queryClient.clear();
-        router.replace("/login");
-      } else {
-        setLoading(false);
-      }
-    };
+    if (!isLoading && !session) {
+      queryClient.clear();
+      router.replace("/login");
+    }
+  }, [isLoading, session, router, queryClient]);
 
-    checkAuth();
+  useEffect(() => {
 
     // Listen for auth changes
     const {
@@ -43,15 +36,13 @@ export default function ProtectedRoute({
       
       if (!session) {
         router.replace("/login");
-      } else {
-        setLoading(false);
       }
     });
 
     return () => subscription.unsubscribe();
   }, [router, queryClient]);
 
-  if (loading) {
+  if (isLoading || !session) {
     return (
       <div className="flex h-screen items-center justify-center bg-zinc-950">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-emerald-500 border-t-transparent"></div>

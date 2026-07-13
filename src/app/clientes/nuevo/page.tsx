@@ -6,10 +6,12 @@ import { supabase } from "@/lib/supabase/client";
 import { ArrowLeft, User, Phone, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function NuevoClientePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { data: session } = useAuth();
   const [loading, setLoading] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -27,11 +29,10 @@ export default function NuevoClientePage() {
 
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!session) return;
 
       const { error } = await supabase.from("clientes").insert({
-        user_id: user.id,
+        user_id: session.id,
         nombre: formData.nombre,
         telefono: formData.telefono,
         direccion: formData.direccion,

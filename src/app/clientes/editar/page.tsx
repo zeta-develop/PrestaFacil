@@ -52,8 +52,7 @@ function ClientesEditarContent() {
 
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user || !id) return;
+      if (!session || !id) return;
 
       const { error } = await supabase
         .from("clientes")
@@ -65,7 +64,7 @@ function ClientesEditarContent() {
           updated_at: new Date().toISOString(),
         })
         .eq("id", id)
-        .eq("user_id", user.id);
+        .eq("user_id", session.id);
 
       if (error) throw error;
       
