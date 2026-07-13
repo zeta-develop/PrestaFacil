@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase/client";
 import { ArrowLeft, User, Phone, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { clienteService } from "@/services/databaseService";
 
 export default function NuevoClientePage() {
   const router = useRouter();
@@ -31,16 +31,12 @@ export default function NuevoClientePage() {
     try {
       if (!session) return;
 
-      const { error } = await supabase.from("clientes").insert({
-        user_id: session.id,
+      await clienteService.create(session.id, {
         nombre: formData.nombre,
         telefono: formData.telefono,
         direccion: formData.direccion,
-        estado: "activo"
       });
 
-      if (error) throw error;
-      
       queryClient.invalidateQueries({ queryKey: ["clientes"] });
       queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
       toast.success("Cliente creado exitosamente");

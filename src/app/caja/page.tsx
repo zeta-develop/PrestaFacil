@@ -2,13 +2,13 @@
 
 import { useState, useMemo } from 'react';
 import Link from "next/link";
-import { supabase } from '@/lib/supabase/client';
 import DashboardLayout from "@/components/DashboardLayout";
 import { ArrowLeft, Search, Filter, ArrowUpRight, ArrowDownLeft, X, DollarSign, Wallet } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/formatters';
 import { toast } from 'sonner';
+import { cajaService } from '@/services/databaseService';
 
 interface Movimiento {
   id: string;
@@ -61,13 +61,12 @@ export default function CajaPage() {
     queryKey: ["capital", session?.id],
     enabled: !!session?.id,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("capital_config")
-        .select("capital_disponible")
-        .eq("user_id", session!.id)
-        .single();
-
-      return data as CapitalConfig;
+      try {
+        const data = await cajaService.getCapitalDisponible(session!.id);
+        return (data || { capital_disponible: 0 }) as CapitalConfig;
+      } catch (err) {
+        return { capital_disponible: 0 };
+      }
     },
   });
 
@@ -75,14 +74,12 @@ export default function CajaPage() {
     queryKey: ["movimientos-caja", session?.id],
     enabled: !!session?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("movimientos_caja")
-        .select("*")
-        .eq("user_id", session!.id)
-        .order("fecha", { ascending: false });
-
-      if (error) throw error;
-      return data as Movimiento[];
+      try {
+        const data = await cajaService.getAllMovimientos(session!.id);
+        return data as Movimiento[];
+      } catch (err) {
+        return [];
+      }
     },
   });
 
@@ -174,38 +171,13 @@ export default function CajaPage() {
     try {
       if (!session) return;
 
-      // Insertar movimiento
-      const { error: movError } = await supabase.from("movimientos_caja").insert({
-        user_id: session.id,
-        tipo: modalTipo,
-        categoria: formData.categoria,
+      await cajaService.insertMovimiento(
+        session.id,
+        modalTipo,
+        formData.categoria,
         monto,
-        descripcion: formData.descripcion,
-      });
-
-      if (movError) throw movError;
-
-      // Obtener capital config actual
-      const { data: configData } = await supabase
-        .from("capital_config")
-        .select("*")
-        .eq("user_id", session.id)
-        .single();
-
-      if (configData) {
-        // Actualizar capital según tipo de movimiento
-        const nuevoCapital =
-          modalTipo === "entrada"
-            ? Number(configData.capital_disponible) + monto
-            : Number(configData.capital_disponible) - monto;
-
-        await supabase
-          .from("capital_config")
-          .update({
-            capital_disponible: nuevoCapital,
-          })
-          .eq("user_id", session.id);
-      }
+        formData.descripcion
+      );
 
       toast.success(`${modalTipo === "entrada" ? "Ingreso" : "Egreso"} registrado exitosamente`);
       setShowModal(false);

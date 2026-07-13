@@ -2,12 +2,12 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { ArrowLeft, ChevronLeft, ChevronRight, TrendingUp, DollarSign, Wallet, Zap } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { formatCurrency } from "@/lib/formatters";
 import { useAuth } from "@/hooks/useAuth";
+import { reporteService } from "@/services/databaseService";
 
 interface Pago {
   id: string;
@@ -45,13 +45,7 @@ export default function ReportesPage() {
     queryKey: ["capital-config-reportes", session?.id],
     enabled: !!session?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("capital_config")
-        .select("dia_corte_kpi")
-        .eq("user_id", session!.id)
-        .single();
-      
-      if (error) throw error;
+      const data = await reporteService.getDiaCorte(session!.id);
       return data;
     }
   });
@@ -62,13 +56,7 @@ export default function ReportesPage() {
     queryKey: ["pagos-reportes", session?.id],
     enabled: !!session?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("pagos")
-        .select("*")
-        .eq("user_id", session!.id)
-        .order("fecha_pago", { ascending: true });
-
-      if (error) throw error;
+      const data = await reporteService.getAllPagos(session!.id);
       return data as Pago[];
     },
   });
