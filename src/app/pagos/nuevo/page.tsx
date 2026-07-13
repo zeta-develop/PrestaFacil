@@ -38,10 +38,10 @@ export default function NuevoPagoPage() {
   });
 
   const { data: prestamos = [] } = useQuery({
-    queryKey: ["prestamos-activos", session?.id],
+    queryKey: ["prestamos_activos", session?.id],
     enabled: !!session?.id,
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("prestamos")
         .select(`
           *,
@@ -50,7 +50,8 @@ export default function NuevoPagoPage() {
         .eq("user_id", session!.id)
         .eq("estado", "activo");
       
-      return (data as unknown as Prestamo[]) || [];
+      if (error) throw error;
+      return (data || []) as unknown as Prestamo[];
     }
   });
 

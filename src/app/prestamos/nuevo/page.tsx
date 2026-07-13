@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
 import CustomSelect from "@/components/CustomSelect";
@@ -10,19 +10,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { CapitalConfig } from "@/types/database";
 
-
-interface Prestamo {
-  id: string;
-  saldo_pendiente: number;
-}
-
 export default function NuevoPrestamoPage() {
   const router = useRouter();
   const { data: session } = useAuth();
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
-  const [deudasActivas, setDeudasActivas] = useState<number>(0);
-  const [prestamosPendientes, setPrestamosPendientes] = useState<Prestamo[]>([]);
   const [descontarDeuda, setDescontarDeuda] = useState(false);
   
   const [formData, setFormData] = useState({
@@ -32,16 +24,6 @@ export default function NuevoPrestamoPage() {
     frecuencia_pago: "diario",
     cantidad_cuotas: "24",
   });
-
-  // Calculate fields dynamically
-  const monto = parseFloat(formData.monto_prestado) || 0;
-  const interes = parseFloat(formData.porcentaje_interes) || 0;
-  const cuotas = parseInt(formData.cantidad_cuotas) || 1;
-  
-  // Monto neto (descontando deuda si está habilitado)
-  const montoNeto = descontarDeuda ? Math.max(monto - deudasActivas, 0) : monto;
-  const totalPagar = montoNeto + (montoNeto * (interes / 100));
-  const cuotaMonto = totalPagar / cuotas;
 
   const { data: clientesQuery = [] } = useQuery({
     queryKey: ["clientes", session?.id],
@@ -59,18 +41,10 @@ export default function NuevoPrestamoPage() {
   const clientes = clientesQuery;
 
   // Obtener deudas activas cuando se selecciona cliente
-  useEffect(() => {
-    const fetchDeudasActivas = async () => {
-      if (!formData.cliente_id) {
-        setDeudasActivas(0);
-        setPrestamosPendientes([]);
-        setDescontarDeuda(false);
-        return;
-      }
-
-      if (!session) return;
-
-
+  const { data: prestamosPendientes = [] } = useQuery({
+    queryKey: ["deudas_activas", session?.id, formData.cliente_id],
+    enabled: !!session?.id && !!formData.cliente_id,
+    queryFn: async () => {
       const { data, error } = await supabase
         .from("prestamos")
         .select("id, saldo_pendiente")
@@ -80,22 +54,26 @@ export default function NuevoPrestamoPage() {
 
       if (error) {
         console.error("Error fetching deudas:", error);
-        return;
+        return [];
       }
+      return data || [];
+    }
+  });
 
-      if (data && data.length > 0) {
-        const totalDeuda = data.reduce((sum, p) => sum + p.saldo_pendiente, 0);
-        setDeudasActivas(totalDeuda);
-        setPrestamosPendientes(data);
-      } else {
-        setDeudasActivas(0);
-        setPrestamosPendientes([]);
-        setDescontarDeuda(false);
-      }
-    };
+  const deudasActivas = prestamosPendientes.reduce((sum, p) => sum + p.saldo_pendiente, 0);
 
-    fetchDeudasActivas();
-  }, [formData.cliente_id, session]);
+  // Computed state for deducting debt to avoid effect synchronizations
+  const isDescontarDeudaEnabled = descontarDeuda && deudasActivas > 0;
+
+  // Calculate fields dynamically
+  const monto = parseFloat(formData.monto_prestado) || 0;
+  const interes = parseFloat(formData.porcentaje_interes) || 0;
+  const cuotas = parseInt(formData.cantidad_cuotas) || 1;
+
+  // Monto neto (descontando deuda si está habilitado)
+  const montoNeto = isDescontarDeudaEnabled ? Math.max(monto - deudasActivas, 0) : monto;
+  const totalPagar = montoNeto + (montoNeto * (interes / 100));
+  const cuotaMonto = totalPagar / cuotas;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -310,7 +288,7 @@ export default function NuevoPrestamoPage() {
                   ${deudasActivas.toFixed(2)}
                 </div>
               </div>
-              {descontarDeuda && montoNeto !== monto && (
+              {isDescontarDeudaEnabled && montoNeto !== monto && (
                 <div className="bg-teal-50 dark:bg-white/5 rounded-xl p-3 border border-teal-200 dark:border-teal-500/20">
                   <span className="text-xs text-teal-700 dark:text-teal-400/80">Monto Neto</span>
                   <div className="text-lg font-bold text-teal-600 dark:text-teal-400 mt-1">
@@ -324,7 +302,7 @@ export default function NuevoPrestamoPage() {
             <label className="flex items-center gap-3 cursor-pointer mt-3 p-2 rounded-lg hover:bg-orange-100/30 dark:hover:bg-white/5 transition-colors">
               <input
                 type="checkbox"
-                checked={descontarDeuda}
+                checked={isDescontarDeudaEnabled}
                 onChange={(e) => setDescontarDeuda(e.target.checked)}
                 className="w-4 h-4 rounded border-orange-500/50 accent-orange-500 cursor-pointer"
               />
@@ -333,13 +311,13 @@ export default function NuevoPrestamoPage() {
               </span>
             </label>
 
-            {descontarDeuda && monto >= deudasActivas && (
+            {isDescontarDeudaEnabled && monto >= deudasActivas && (
               <div className="flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 p-2 rounded-lg">
                 <CheckCircle2 size={14} />
                 <span>Deuda será completamente liquidada</span>
               </div>
             )}
-            {descontarDeuda && monto < deudasActivas && (
+            {isDescontarDeudaEnabled && monto < deudasActivas && (
               <div className="flex items-center gap-2 text-xs text-orange-700 dark:text-orange-400 bg-orange-500/10 p-2 rounded-lg">
                 <AlertCircle size={14} />
                 <span>El monto debe ser mayor a ${deudasActivas.toFixed(2)} para liquidar la deuda</span>
@@ -421,7 +399,7 @@ export default function NuevoPrestamoPage() {
             <span className="text-zinc-500 dark:text-zinc-400">Total a pagar:</span>
             <span className="text-lg font-bold text-zinc-900 dark:text-white">${totalPagar.toFixed(2)}</span>
           </div>
-          {descontarDeuda && deudasActivas > 0 && (
+          {isDescontarDeudaEnabled && (
             <div className="flex justify-between items-center text-sm pt-3 border-t border-orange-200 dark:border-orange-500/20">
               <span className="text-zinc-500 dark:text-zinc-400">Descuento (Deuda):</span>
               <span className="text-lg font-bold text-orange-500">-${deudasActivas.toFixed(2)}</span>
