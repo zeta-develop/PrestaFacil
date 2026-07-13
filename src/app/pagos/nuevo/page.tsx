@@ -27,8 +27,8 @@ interface Prestamo {
 
 export default function NuevoPagoPage() {
   const router = useRouter();
-  const { data: session } = useAuth();
   const queryClient = useQueryClient();
+  const { data: session } = useAuth();
   const [loading, setLoading] = useState(false);
   const [selectedPrestamo, setSelectedPrestamo] = useState<Prestamo | null>(null);
   
@@ -79,8 +79,7 @@ export default function NuevoPagoPage() {
 
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!session) return;
 
       // 1. Matemáticas Proporcionales
       const proporcionCapital = selectedPrestamo.monto / selectedPrestamo.total_a_pagar;
@@ -95,7 +94,7 @@ export default function NuevoPagoPage() {
 
       // 2. Insertar Pago
       const { error: pagoError } = await supabase.from("pagos").insert({
-        user_id: user.id,
+        user_id: session.id,
         prestamo_id: selectedPrestamo.id,
         monto_pagado: montoPago,
         capital_abonado: capitalAbonado,
@@ -124,7 +123,7 @@ export default function NuevoPagoPage() {
       const { data: configData } = await supabase
         .from("capital_config")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", session.id)
         .single();
 
       if (configData) {
@@ -136,7 +135,7 @@ export default function NuevoPagoPage() {
             ganancia_total: Number(configData.ganancia_total) + interesPagado,
             total_recuperado: Number(configData.total_recuperado) + capitalAbonado
           })
-          .eq("user_id", user.id);
+          .eq("user_id", session.id);
         
         if (configError) console.error("Error updating capital_config:", configError);
       }

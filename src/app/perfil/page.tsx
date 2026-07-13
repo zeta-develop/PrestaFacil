@@ -16,7 +16,6 @@ export default function PerfilPage() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { data: session } = useAuth();
-
   const [saving, setSaving] = useState(false);
   const [appVersion, setAppVersion] = useState("0.2.0");
 
@@ -69,8 +68,7 @@ export default function PerfilPage() {
   const handleSaveCapital = async () => {
     setSaving(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!session) return;
 
       // Use refs to get values since uncontrolled components don't re-render on edit,
       // preventing re-render cascading while also allowing standard UI pattern
@@ -87,7 +85,7 @@ export default function PerfilPage() {
       const { data: existing } = await supabase
         .from("capital_config")
         .select("id")
-        .eq("user_id", user.id)
+        .eq("user_id", session.id)
         .single();
 
       if (existing) {
@@ -102,7 +100,7 @@ export default function PerfilPage() {
         await supabase
           .from("capital_config")
           .insert({
-            user_id: user.id,
+            user_id: session.id,
             capital_inicial: numCapital,
             capital_disponible: 0,
             dia_corte_kpi: numDiaCorte

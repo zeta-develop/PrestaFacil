@@ -172,12 +172,11 @@ export default function CajaPage() {
 
     setIsSubmitting(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!session) return;
 
       // Insertar movimiento
       const { error: movError } = await supabase.from("movimientos_caja").insert({
-        user_id: user.id,
+        user_id: session.id,
         tipo: modalTipo,
         categoria: formData.categoria,
         monto,
@@ -190,7 +189,7 @@ export default function CajaPage() {
       const { data: configData } = await supabase
         .from("capital_config")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", session.id)
         .single();
 
       if (configData) {
@@ -205,13 +204,13 @@ export default function CajaPage() {
           .update({
             capital_disponible: nuevoCapital,
           })
-          .eq("user_id", user.id);
+          .eq("user_id", session.id);
       }
 
       toast.success(`${modalTipo === "entrada" ? "Ingreso" : "Egreso"} registrado exitosamente`);
       setShowModal(false);
-      queryClient.invalidateQueries({ queryKey: ["movimientos-caja", user.id] });
-      queryClient.invalidateQueries({ queryKey: ["capital", user.id] });
+      queryClient.invalidateQueries({ queryKey: ["movimientos-caja", session.id] });
+      queryClient.invalidateQueries({ queryKey: ["capital", session.id] });
     } catch (error) {
       console.error(error);
       toast.error("Error al registrar el movimiento");
