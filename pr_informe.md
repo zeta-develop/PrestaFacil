@@ -1,43 +1,29 @@
 ## Resumen Ejecutivo
 
-Como parte de la auditoría de rendimiento de la plataforma PrestaFácil, se realizó una exhaustiva revisión enfocada en detectar y corregir problemas relacionados al manejo de estado con React Query, reutilización de código (DRY) y ciclos de vida (useEffects). Se encontraron oportunidades de mejora que comprometen el rendimiento a largo plazo de la aplicación, las cuales han sido solucionadas bajo el enfoque de Clean Architecture y sin alterar la funcionalidad.
+Como parte de la auditoría de rendimiento de la plataforma PrestaFácil, se detectó un cuello de botella silencioso pero importante en las funciones de formateo financiero y de fechas. La instanciación repetitiva de la API de Internacionalización (`Intl`) dentro de bucles o listados puede degradar sustancialmente el rendimiento (CPU) de los clientes en dispositivos móviles. Esta optimización reutiliza las instancias en el módulo central de formateo para ahorrar ciclos de procesamiento.
 
 ## Hallazgos
 
-1.  **Llamadas Autenticación Redundantes:** Múltiples componentes invocaban a `supabase.auth.getUser()` directamente dentro de queries, lo cual rompía la reutilización y el cacheo estándar.
-2.  **Configuración de Caché Ineficiente:** El `gcTime` de React Query en `ReactQueryProvider.tsx` estaba configurado en 24 horas (`1000 * 60 * 60 * 24`), lo cual podría ocasionar serios problemas de consumo de memoria (memory leaks) en dispositivos móviles, donde la aplicación corre sobre un WebView mediante Capacitor.
-3.  **Funciones Utilitarias Embebidas:** Las funciones `formatCurrency` y `formatDate` se estaban re-creando dentro de los componentes funcionales, provocando instanciaciones innecesarias del objeto `Intl.NumberFormat` en cada ciclo de render.
-4.  **SetState Anti-Patrones en `useEffect`:** En `src/app/prestamos/nuevo/page.tsx` se realizaban llamadas síncronas a `setState` inmediatamente tras obtener datos en un `useEffect`, causando renderizados en cascada, además de llamadas directas a la base de datos sin encapsular.
+1.  **Múltiples instanciaciones de Intl:** Las funciones utilitarias `formatCurrency`, `formatDate` y `formatDateWithTime` en `src/lib/formatters.ts` invocaban repetidamente a `new Intl.NumberFormat(...)` y `new Intl.DateTimeFormat(...)` en cada llamada. Esto resulta ser una operación costosa en términos de rendimiento cuando estas funciones se utilizan para iterar sobre listas largas, como los historiales de pagos, listas de deudores y moras en el frontend de PrestaFácil.
 
 ## Mejoras implementadas
 
-*   **Hook Reutilizable de Autenticación (`useAuth`)**: Se creó el hook `useAuth` (`src/hooks/useAuth.ts`) que gestiona y cachea de manera centralizada la sesión de usuario de Supabase aprovechando React Query. Se migró la aplicación completa para consumir esta funcionalidad.
-*   **Ajustes al Proveedor de React Query:** Se redujo el tiempo de retención de basura (Garbage Collection Time - `gcTime`) de 24 horas a 1 hora, preservando la memoria sin afectar la experiencia de uso (el `staleTime` permanece en 5 minutos para la frescura de la información).
-*   **Extracción de Formatters:** Se centralizó la lógica de visualización financiera y fechas en `src/lib/formatters.ts`.
-*   **Refactorización de Formularios Críticos:** En los componentes de formularios como los de préstamos y pagos, se remplazó la lógica síncrona manual de fetch (`useEffect` fetchers) a una estrategia pasiva de `useQuery`. Esto evita llamadas duplicadas y renderizados en cascada (cascading renders).
-*   **Limpieza Eslint y Type Checking**: Se limpiaron alertas referidas a imports sin usar y dependencias faltantes en `useEffects` (`ProtectedRoute.tsx`).
+*   **Cacheo de instanciaciones Intl:** Se han extraído y refactorizado las instancias de `Intl.NumberFormat` e `Intl.DateTimeFormat` al nivel de módulo en `src/lib/formatters.ts`. De esta manera, el objeto se instancia una sola vez cuando el motor evalúa el script, y luego es reutilizado a lo largo del ciclo de vida de la aplicación.
+*   Esto proveerá una leve pero consistente mejora de rendimiento (frames y ciclos de CPU reducidos) en todas las pantallas donde se pintan múltiples monedas o fechas en pantalla.
 
 ## Archivos modificados
 
-- `src/hooks/useAuth.ts` (Nuevo)
-- `src/lib/formatters.ts` (Nuevo)
-- `src/app/**/*.tsx` (Todos los componentes que usaban `supabase.auth.getUser()`)
-- `src/components/ProtectedRoute.tsx`
-- `src/components/ReactQueryProvider.tsx`
-- `src/services/databaseService.ts`
+- `src/lib/formatters.ts`
 
 ## Riesgos
 
-**Bajo.** Las implementaciones consisten principalmente de refactorizaciones arquitectónicas. La mayor preocupación era el manejo del token/estado del usuario, por lo cual se debe de testear adecuadamente el login y renderización de vistas iniciales para verificar que `session` está fluyendo correctamente desde el caché local de React Query hacia los hooks dependientes.
+**Nulo / Bajo.** Es un simple cambio a nivel de módulo, la lógica interna y las opciones pasadas a los formateadores (`Intl`) siguen siendo exactamente las mismas. No altera ni la estructura visual ni la funcionalidad lógica.
 
 ## Cómo validar los cambios
 
-1.  **Navegación general:** Autentíquese en el sistema e ingrese a las secciones principales (Clientes, Préstamos, Caja, Pagos).
-2.  **Rendimiento percibido:** Se debe notar una mayor fluidez, especialmente en móviles, gracias al menor uso de RAM al reducir el `gcTime` del gestor de queries.
-3.  **Añadir recursos:** Crear un nuevo cliente o préstamo para comprobar que la lógica de renderizado en cascada corregida carga correctamente las dependencias dinámicas sin lag ni fallas en la recolección de los datos (e.g. carga de clientes, deudas activas).
-4.  **Verificación de logs:** Confirmar que no hay errores de lint ni de types (`pnpm run lint`, `pnpm run build`).
+1.  **Navegación general:** Ingresar a las secciones de la aplicación donde se despliegan listas con fechas y precios, tales como "Clientes", "Caja", "Pagos" o "Reportes".
+2.  **Verificar compilación:** Se validó que el código no posee errores de lint y su proceso de build pasa sin contratiempos con `pnpm run build`.
 
 ## Recomendaciones a futuro
 
-*   **Paginación / Virtualización**: Actualmente, componentes como las listas de clientes obtienen todos los clientes de una vez (`selectAll`). Si el sistema escala y los clientes son cientos o miles, esto saturará la memoria del DOM en Capacitor. Se recomienda implementar `react-window` o paginación nativa con cursores en Supabase.
-*   **Suspense:** Extender el uso del patrón render-as-you-fetch (Suspense) con las versiones nuevas de React 19 instaladas en el proyecto.
+*   **Consultas a base de datos (Selects vs Views):** Aunque no cubierto en este commit por estar centrado en micro-optimizaciones, se notó un exceso de consultas con `.select(*)` y cruces anidados en transacciones financieras en los formularios de Nuevo Préstamo/Pago. Sería ideal implementar Procedimientos Almacenados o vistas.
