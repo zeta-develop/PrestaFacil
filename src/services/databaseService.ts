@@ -49,15 +49,21 @@ export const clienteService = {
     return data as Cliente;
   },
 
-  async create(cliente: Omit<Cliente, "id" | "created_at">) {
-    const { data, error } = await supabase
+  async create(userId: string, data: { nombre: string; telefono: string; direccion: string }) {
+    const { data: result, error } = await supabase
       .from("clientes")
-      .insert(cliente)
+      .insert({
+        user_id: userId,
+        nombre: data.nombre,
+        telefono: data.telefono,
+        direccion: data.direccion,
+        estado: "activo"
+      })
       .select()
       .single();
     
     if (error) throw error;
-    return data as Cliente;
+    return result as Cliente;
   }
 };
 
@@ -428,6 +434,158 @@ export const pagoService = {
         totalCapital,
         totalInteres
     };
+  }
+};
+
+export const cajaService = {
+  async getCapitalDisponible(userId: string) {
+    const { data, error } = await supabase
+      .from("capital_config")
+      .select("capital_disponible")
+      .eq("user_id", userId)
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async getAllMovimientos(userId: string) {
+    const { data, error } = await supabase
+      .from("movimientos_caja")
+      .select("*")
+      .eq("user_id", userId)
+      .order("fecha", { ascending: false });
+    if (error) throw error;
+    return data;
+  },
+
+  async insertMovimiento(userId: string, tipo: string, categoria: string, monto: number, descripcion: string) {
+    const { error: movError } = await supabase.from("movimientos_caja").insert({
+      user_id: userId,
+      tipo,
+      categoria,
+      monto,
+      descripcion,
+    });
+    if (movError) throw movError;
+
+    const { data: configData } = await supabase
+      .from("capital_config")
+      .select("*")
+      .eq("user_id", userId)
+      .single();
+
+    if (configData) {
+      const nuevoCapital =
+        tipo === "entrada"
+          ? Number(configData.capital_disponible) + monto
+          : Number(configData.capital_disponible) - monto;
+
+      await supabase
+        .from("capital_config")
+        .update({
+          capital_disponible: nuevoCapital,
+        })
+        .eq("user_id", userId);
+    }
+  }
+};
+
+export const reporteService = {
+  async getDiaCorte(userId: string) {
+    const { data, error } = await supabase
+      .from("capital_config")
+      .select("dia_corte_kpi")
+      .eq("user_id", userId)
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async getAllPagos(userId: string) {
+    const { data, error } = await supabase
+      .from("pagos")
+      .select("*")
+      .eq("user_id", userId)
+      .order("fecha_pago", { ascending: true });
+    if (error) throw error;
+    return data;
+  }
+};
+
+export const rutaService = {
+  async getPrestamosActivos(userId: string) {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const { data, error } = await supabase
+      .from("prestamos")
+      .select(`
+        *,
+        clientes (*),
+        pagos (*)
+      `)
+      .eq("user_id", userId)
+      .or(`estado.eq.activo,and(estado.eq.pagado,updated_at.gte.${todayStart.toISOString()})`);
+
+    if (error) throw error;
+    return data;
+  },
+
+  async registrarPago(
+    userId: string,
+    prestamo: { id: string },
+    montoPago: number,
+    capitalAbonado: number,
+    interesPagado: number,
+    nuevoSaldo: number,
+    nuevoCapitalRecuperado: number,
+    nuevoInteresGanado: number,
+    nuevasCuotasPagadas: number,
+    nuevoEstado: string
+  ) {
+    const { error: pagoError } = await supabase.from("pagos").insert({
+      user_id: userId,
+      prestamo_id: prestamo.id,
+      monto_pagado: montoPago,
+      capital_abonado: capitalAbonado,
+      interes_pagado: interesPagado,
+      numero_cuota: nuevasCuotasPagadas,
+      metodo_pago: "efectivo",
+    });
+
+    if (pagoError) throw pagoError;
+
+    const { error: prestamoError } = await supabase
+      .from("prestamos")
+      .update({
+        saldo_pendiente: nuevoSaldo < 0 ? 0 : nuevoSaldo,
+        cuotas_pagadas: nuevasCuotasPagadas,
+        capital_recuperado: nuevoCapitalRecuperado,
+        interes_ganado: nuevoInteresGanado,
+        estado: nuevoEstado,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", prestamo.id);
+
+    if (prestamoError) throw prestamoError;
+
+    const { data: configData } = await supabase
+      .from("capital_config")
+      .select("*")
+      .eq("user_id", userId)
+      .single();
+
+    if (configData) {
+      await supabase
+        .from("capital_config")
+        .update({
+          capital_disponible: Number(configData.capital_disponible) + montoPago,
+          capital_en_calle: Number(configData.capital_en_calle) - capitalAbonado,
+          ganancia_total: Number(configData.ganancia_total) + interesPagado,
+          total_recuperado: Number(configData.total_recuperado) + capitalAbonado,
+        })
+        .eq("user_id", userId);
+    }
   }
 };
 

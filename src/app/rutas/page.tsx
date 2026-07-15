@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from 'react';
-import { supabase } from '@/lib/supabase/client';
 import DashboardLayout from "@/components/DashboardLayout";
 import { MapPin, Wallet, DollarSign, Phone, Activity } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { rutaService } from '@/services/databaseService';
 import Link from "next/link";
 
 interface Cliente {
@@ -51,19 +51,7 @@ export default function RutasInteligentesPage() {
     queryKey: ["rutasDiarias"],
     enabled: !!session?.id,
     queryFn: async () => {
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-
-      const { data, error } = await supabase
-        .from("prestamos")
-        .select(`
-          *,
-          clientes (*),
-          pagos (*)
-        `)
-        .or(`estado.eq.activo,and(estado.eq.pagado,updated_at.gte.${todayStart.toISOString()})`);
-
-      if (error) throw error;
+      const data = await rutaService.getPrestamosActivos(session!.id);
       return data as unknown as Prestamo[];
     },
   });
@@ -142,49 +130,18 @@ export default function RutasInteligentesPage() {
       const nuevasCuotasPagadas = selectedPrestamo.cuotas_pagadas + 1;
       const nuevoEstado = nuevoSaldo <= 0.01 ? "pagado" : selectedPrestamo.estado;
 
-      const { error: pagoError } = await supabase.from("pagos").insert({
-        user_id: session.id,
-        prestamo_id: selectedPrestamo.id,
-        monto_pagado: montoPago,
-        capital_abonado: capitalAbonado,
-        interes_pagado: interesPagado,
-        numero_cuota: nuevasCuotasPagadas,
-        metodo_pago: "efectivo"
-      });
-
-      if (pagoError) throw pagoError;
-
-      const { error: prestamoError } = await supabase
-        .from("prestamos")
-        .update({
-          saldo_pendiente: nuevoSaldo < 0 ? 0 : nuevoSaldo,
-          cuotas_pagadas: nuevasCuotasPagadas,
-          capital_recuperado: nuevoCapitalRecuperado,
-          interes_ganado: nuevoInteresGanado,
-          estado: nuevoEstado,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", selectedPrestamo.id);
-
-      if (prestamoError) throw prestamoError;
-
-      const { data: configData } = await supabase
-        .from("capital_config")
-        .select("*")
-        .eq("user_id", session.id)
-        .single();
-
-      if (configData) {
-        await supabase
-          .from("capital_config")
-          .update({
-            capital_disponible: Number(configData.capital_disponible) + montoPago,
-            capital_en_calle: Number(configData.capital_en_calle) - capitalAbonado,
-            ganancia_total: Number(configData.ganancia_total) + interesPagado,
-            total_recuperado: Number(configData.total_recuperado) + capitalAbonado
-          })
-          .eq("user_id", session.id);
-      }
+      await rutaService.registrarPago(
+        session.id,
+        selectedPrestamo,
+        montoPago,
+        capitalAbonado,
+        interesPagado,
+        nuevoSaldo,
+        nuevoCapitalRecuperado,
+        nuevoInteresGanado,
+        nuevasCuotasPagadas,
+        nuevoEstado
+      );
 
       toast.success(`Pago de $${montoPago} registrado a ${selectedPrestamo.clientes?.nombre}`);
       setSelectedPrestamo(null);
