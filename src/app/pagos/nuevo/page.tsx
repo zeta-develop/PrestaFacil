@@ -122,7 +122,7 @@ export default function NuevoPagoPage() {
       // 4. Actualizar Capital Config
       const { data: configData } = await supabase
         .from("capital_config")
-        .select("*")
+        .select("capital_disponible, capital_en_calle, ganancia_total, total_recuperado")
         .eq("user_id", session.id)
         .single();
 
