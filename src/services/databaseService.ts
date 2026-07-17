@@ -451,7 +451,7 @@ export const cajaService = {
   async getAllMovimientos(userId: string) {
     const { data, error } = await supabase
       .from("movimientos_caja")
-      .select("*")
+      .select("id, tipo, categoria, monto, descripcion, fecha, created_at")
       .eq("user_id", userId)
       .order("fecha", { ascending: false });
     if (error) throw error;
@@ -504,7 +504,7 @@ export const reporteService = {
   async getAllPagos(userId: string) {
     const { data, error } = await supabase
       .from("pagos")
-      .select("*")
+      .select("monto_pagado, capital_abonado, interes_pagado, fecha_pago")
       .eq("user_id", userId)
       .order("fecha_pago", { ascending: true });
     if (error) throw error;
