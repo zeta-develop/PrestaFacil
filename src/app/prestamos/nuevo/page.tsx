@@ -96,7 +96,7 @@ export default function NuevoPrestamoPage() {
       // Obtener el config de capital actual
       const { data: configData } = await supabase
         .from("capital_config")
-        .select("*")
+        .select("capital_disponible, capital_en_calle, ganancia_total, total_recuperado, total_prestado")
         .eq("user_id", session!.id)
         .single();
 
@@ -115,7 +115,7 @@ export default function NuevoPrestamoPage() {
           // Obtener detalles completos del préstamo anterior
           const { data: prestamoData } = await supabase
             .from("prestamos")
-            .select("*")
+            .select("id, monto, total_a_pagar, saldo_pendiente, cuotas_pagadas, capital_recuperado, interes_ganado")
             .eq("id", prestamoAnterior.id)
             .eq("user_id", session!.id)
             .single();
