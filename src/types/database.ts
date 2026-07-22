@@ -58,3 +58,12 @@ export interface CapitalConfig {
   updated_at?: string;
 }
 
+export interface MovimientoCaja {
+  id: string;
+  tipo: "entrada" | "salida";
+  categoria: string;
+  monto: number;
+  descripcion: string;
+  fecha: string;
+  created_at: string;
+}

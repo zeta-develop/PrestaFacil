@@ -9,16 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/lib/formatters';
 import { toast } from 'sonner';
 import { cajaService } from '@/services/databaseService';
-
-interface Movimiento {
-  id: string;
-  tipo: "entrada" | "salida";
-  categoria: string;
-  monto: number;
-  descripcion: string;
-  fecha: string;
-  created_at: string;
-}
+import { MovimientoCaja } from '@/types/database';
 
 interface CapitalConfig {
   capital_disponible: number;
@@ -76,7 +67,7 @@ export default function CajaPage() {
     queryFn: async () => {
       try {
         const data = await cajaService.getAllMovimientos(session!.id);
-        return data as Movimiento[];
+        return data as MovimientoCaja[];
       } catch (err) {
         return [];
       }
