@@ -29,8 +29,8 @@ export default function LoginPage() {
       // For now, redirect to dashboard or home
       router.push("/");
       router.refresh();
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Error al iniciar sesión. Verifica tus credenciales.";
+    } catch {
+      const errorMessage = "Error al iniciar sesión. Verifica tus credenciales.";
       setError(errorMessage);
     } finally {
       setLoading(false);
