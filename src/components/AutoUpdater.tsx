@@ -147,9 +147,8 @@ export function AutoUpdater() {
             }
           } catch (err) {
             setDownloadStatus("error");
-            const errorMessage = err instanceof Error ? err.message : "No se pudo iniciar la instalación";
             console.error("AutoUpdater: Error en downloadAndInstall", err);
-            setDownloadMessage(`Error: ${errorMessage}`);
+            setDownloadMessage("No se pudo iniciar la instalación");
           } finally {
             if (progressListener.current) {
               await progressListener.current.remove();
