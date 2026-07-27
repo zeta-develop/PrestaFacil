@@ -38,9 +38,8 @@ export default function RegisterPage() {
       setTimeout(() => {
         router.push("/login");
       }, 3000);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Error al crear la cuenta. Intenta nuevamente.";
-      setError(errorMessage);
+    } catch {
+      setError("Error al crear la cuenta. Intenta nuevamente.");
     } finally {
       setLoading(false);
     }
