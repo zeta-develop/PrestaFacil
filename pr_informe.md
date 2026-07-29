@@ -1,29 +1,27 @@
 ## Resumen Ejecutivo
 
-Como parte de la auditoría de rendimiento de la plataforma PrestaFácil, se detectó un cuello de botella silencioso pero importante en las funciones de formateo financiero y de fechas. La instanciación repetitiva de la API de Internacionalización (`Intl`) dentro de bucles o listados puede degradar sustancialmente el rendimiento (CPU) de los clientes en dispositivos móviles. Esta optimización reutiliza las instancias en el módulo central de formateo para ahorrar ciclos de procesamiento.
+Como parte de la auditoría continua de rendimiento y seguridad del código de PrestaFácil, se detectaron consultas a la base de datos (Supabase) que utilizaban comodines (`.select("*")`) en lugar de seleccionar columnas explícitamente. Se refactorizaron estas consultas en `databaseService.ts` para que pidan explícitamente los campos necesarios. Además, se limpiaron variables no utilizadas (errores en `catch`) que provocaban advertencias en la verificación de código (linting).
 
 ## Hallazgos
 
-1.  **Múltiples instanciaciones de Intl:** Las funciones utilitarias `formatCurrency`, `formatDate` y `formatDateWithTime` en `src/lib/formatters.ts` invocaban repetidamente a `new Intl.NumberFormat(...)` y `new Intl.DateTimeFormat(...)` en cada llamada. Esto resulta ser una operación costosa en términos de rendimiento cuando estas funciones se utilizan para iterar sobre listas largas, como los historiales de pagos, listas de deudores y moras en el frontend de PrestaFácil.
+1.  **Consultas N+1 y payload innecesario:** En `src/services/databaseService.ts`, varios métodos (como `getAllMovimientos`, la verificación de capital en la misma función, `getAllPagos`, registro de pagos y `getStats` del dashboard) realizaban `.select("*")`. Pedir todos los campos en tablas de configuración y transacciones incrementa el payload de red.
+2.  **Lint warnings:** Se detectaron dos advertencias de ESLint en `src/app/caja/page.tsx` por variables de error no utilizadas en bloques `catch` (`@typescript-eslint/no-unused-vars`).
 
-## Mejoras implementadas
+## Implementación
 
-*   **Cacheo de instanciaciones Intl:** Se han extraído y refactorizado las instancias de `Intl.NumberFormat` e `Intl.DateTimeFormat` al nivel de módulo en `src/lib/formatters.ts`. De esta manera, el objeto se instancia una sola vez cuando el motor evalúa el script, y luego es reutilizado a lo largo del ciclo de vida de la aplicación.
-*   Esto proveerá una leve pero consistente mejora de rendimiento (frames y ciclos de CPU reducidos) en todas las pantallas donde se pintan múltiples monedas o fechas en pantalla.
+*   **Refactorización de consultas:** Se actualizaron las funciones `getAllMovimientos`, `getAllPagos`, `getStats` de dashboard, y los selects sobre `capital_config` en `databaseService.ts` para evitar usar `.select("*")` y en su lugar especificar cada columna estrictamente requerida (por ejemplo, `capital_disponible` en `cajaService`, o todas las columnas específicas en los demás en caso de mapeos estáticos).
+*   **Limpieza de linting:** En `src/app/caja/page.tsx` se removió la declaración explícita de `err` de los bloques catch donde no se usaban, dejándolo simplemente en `catch { ... }` para cumplir con las reglas de linting.
 
 ## Archivos modificados
 
-- `src/lib/formatters.ts`
+- `src/services/databaseService.ts`
+- `src/app/caja/page.tsx`
+
+## Validación
+
+1.  Se validó que el código no posee errores de lint corriendo `pnpm run lint`.
+2.  Se validó que el proceso de compilación TypeScript pasa correctamente usando `pnpm run build`.
 
 ## Riesgos
 
-**Nulo / Bajo.** Es un simple cambio a nivel de módulo, la lógica interna y las opciones pasadas a los formateadores (`Intl`) siguen siendo exactamente las mismas. No altera ni la estructura visual ni la funcionalidad lógica.
-
-## Cómo validar los cambios
-
-1.  **Navegación general:** Ingresar a las secciones de la aplicación donde se despliegan listas con fechas y precios, tales como "Clientes", "Caja", "Pagos" o "Reportes".
-2.  **Verificar compilación:** Se validó que el código no posee errores de lint y su proceso de build pasa sin contratiempos con `pnpm run build`.
-
-## Recomendaciones a futuro
-
-*   **Consultas a base de datos (Selects vs Views):** Aunque no cubierto en este commit por estar centrado en micro-optimizaciones, se notó un exceso de consultas con `.select(*)` y cruces anidados en transacciones financieras en los formularios de Nuevo Préstamo/Pago. Sería ideal implementar Procedimientos Almacenados o vistas.
+**Nulo / Bajo.** Las columnas elegidas son exáctamente las que devolvía la tabla original mapeadas a las estructuras de tipo que se consumen. No rompe la compatibilidad de TypeScript ni el funcionamiento del código.
