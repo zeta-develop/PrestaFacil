@@ -64,7 +64,7 @@ export default function CajaPage() {
       try {
         const data = await cajaService.getCapitalDisponible(session!.id);
         return (data || { capital_disponible: 0 }) as CapitalConfig;
-      } catch (err) {
+      } catch {
         return { capital_disponible: 0 };
       }
     },
@@ -77,7 +77,7 @@ export default function CajaPage() {
       try {
         const data = await cajaService.getAllMovimientos(session!.id);
         return data as Movimiento[];
-      } catch (err) {
+      } catch {
         return [];
       }
     },

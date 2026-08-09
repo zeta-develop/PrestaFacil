@@ -509,7 +509,7 @@ _Generado automáticamente desde PrestaFácil_`;
       // 4. Actualizar Capital Config
       const { data: configData } = await supabase
         .from("capital_config")
-        .select("*")
+        .select("id, user_id, capital_inicial, capital_disponible, capital_en_calle, ganancia_total, total_prestado, total_recuperado, dia_corte_kpi, last_cierre_kpi, created_at, updated_at")
         .eq("user_id", session.id)
         .single();
 

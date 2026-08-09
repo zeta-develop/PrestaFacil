@@ -536,7 +536,7 @@ export const cajaService = {
   async getAllMovimientos(userId: string) {
     const { data, error } = await supabase
       .from("movimientos_caja")
-      .select("*")
+      .select("id, tipo, categoria, monto, descripcion, fecha, created_at, user_id")
       .eq("user_id", userId)
       .order("fecha", { ascending: false });
     if (error) throw error;
@@ -555,7 +555,7 @@ export const cajaService = {
 
     const { data: configData } = await supabase
       .from("capital_config")
-      .select("*")
+      .select("id, user_id, capital_inicial, capital_disponible, capital_en_calle, ganancia_total, total_prestado, total_recuperado, dia_corte_kpi, last_cierre_kpi, created_at, updated_at")
       .eq("user_id", userId)
       .single();
 
@@ -589,7 +589,7 @@ export const reporteService = {
   async getAllPagos(userId: string) {
     const { data, error } = await supabase
       .from("pagos")
-      .select("*")
+      .select("id, user_id, prestamo_id, monto, monto_pagado, capital_abonado, interes_pagado, numero_cuota, metodo_pago, fecha_pago, notas, created_at")
       .eq("user_id", userId)
       .order("fecha_pago", { ascending: true });
     if (error) throw error;
@@ -656,7 +656,7 @@ export const rutaService = {
 
     const { data: configData } = await supabase
       .from("capital_config")
-      .select("*")
+      .select("id, user_id, capital_inicial, capital_disponible, capital_en_calle, ganancia_total, total_prestado, total_recuperado, dia_corte_kpi, last_cierre_kpi, created_at, updated_at")
       .eq("user_id", userId)
       .single();
 
@@ -678,7 +678,7 @@ export const dashboardService = {
   async getStats(userId: string) {
     const { data, error } = await supabase
       .from("capital_config")
-      .select("*")
+      .select("id, user_id, capital_inicial, capital_disponible, capital_en_calle, ganancia_total, total_prestado, total_recuperado, dia_corte_kpi, last_cierre_kpi, created_at, updated_at")
       .eq("user_id", userId)
       .single();
     
