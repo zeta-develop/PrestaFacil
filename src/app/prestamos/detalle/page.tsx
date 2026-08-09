@@ -3,10 +3,9 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
-import { ArrowLeft, Wallet, Calendar, Plus, Activity, DollarSign, Share2, Printer, FileText, Trash2 } from "lucide-react";
+import { ArrowLeft, Wallet, Calendar, Plus, Activity, DollarSign, Share2, Printer, FileText } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import { pagoService } from "@/services/databaseService";
 import { toast } from "sonner";
 import { jsPDF } from "jspdf";
 
@@ -287,8 +286,6 @@ function PrestamoDetalleContent() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: session } = useAuth();
 
@@ -542,29 +539,6 @@ _Generado automáticamente desde PrestaFácil_`;
     }
   };
 
-  const handleDeleteLastPayment = async () => {
-    if (!prestamo || !session) return;
-
-    setIsDeleting(true);
-    try {
-      await pagoService.eliminarUltimoPago(session.id, prestamo.id);
-
-      toast.success("Último pago eliminado correctamente");
-      setShowDeleteModal(false);
-
-      // Invalidar caches
-      queryClient.invalidateQueries({ queryKey: ["prestamo", id] });
-      queryClient.invalidateQueries({ queryKey: ["dashboardData"] });
-      queryClient.invalidateQueries({ queryKey: ["clientes"] });
-      queryClient.invalidateQueries({ queryKey: ["pagos"] });
-    } catch (error) {
-      console.error("Error deleting last payment:", error);
-      toast.error("Ocurrió un error al eliminar el último pago");
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
   if (loading) {
     return (
       <main className="flex-1 p-6 flex justify-center items-center h-screen bg-zinc-50 dark:bg-[#09090B]">
@@ -657,62 +631,6 @@ _Generado automáticamente desde PrestaFácil_`;
         </div>
       )}
 
-      {/* Modal de Eliminar Último Pago */}
-      {showDeleteModal && prestamo.pagos && prestamo.pagos.length > 0 && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-[2rem] p-6 shadow-2xl border border-zinc-200 dark:border-white/10 animate-in zoom-in-95 duration-200">
-            <div className="h-12 w-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-500 mb-4">
-              <Trash2 size={22} />
-            </div>
-            <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">¿Eliminar último pago?</h3>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-1">
-              Se eliminará el pago de <span className="font-bold text-zinc-900 dark:text-white">
-                C${(() => {
-                  const ultimo = [...prestamo.pagos].sort((a, b) =>
-                    (Number(b.numero_cuota) || 0) - (Number(a.numero_cuota) || 0)
-                    || new Date(b.fecha_pago).getTime() - new Date(a.fecha_pago).getTime()
-                  )[0];
-                  return ultimo.monto_pagado.toFixed(2);
-                })()}
-              </span> registrado el{" "}
-              <span className="font-bold text-zinc-900 dark:text-white">
-                {(() => {
-                  const ultimo = [...prestamo.pagos].sort((a, b) =>
-                    (Number(b.numero_cuota) || 0) - (Number(a.numero_cuota) || 0)
-                    || new Date(b.fecha_pago).getTime() - new Date(a.fecha_pago).getTime()
-                  )[0];
-                  return new Date(ultimo.fecha_pago).toLocaleString('es-ES', {
-                    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
-                  });
-                })()}
-              </span>.
-            </p>
-            <p className="text-xs text-zinc-400 dark:text-zinc-500 mb-6">
-              Se revertirá el saldo pendiente, cuotas pagadas, capital e interés del préstamo. Esta acción no se puede deshacer.
-            </p>
-            
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowDeleteModal(false)}
-                disabled={isDeleting}
-                className="flex-1 py-3.5 rounded-2xl font-semibold text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 transition-colors disabled:opacity-50"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteLastPayment}
-                disabled={isDeleting}
-                className="flex-1 py-3.5 rounded-2xl font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors disabled:opacity-50"
-              >
-                {isDeleting ? "Eliminando..." : "Sí, eliminar"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <header className="flex items-center gap-4 pt-2">
         <button onClick={() => router.back()} className="h-10 w-10 flex items-center justify-center rounded-2xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors active:scale-95 shadow-sm dark:shadow-none">
@@ -787,17 +705,6 @@ _Generado automáticamente desde PrestaFácil_`;
           >
             <Plus size={20} />
             <span>Registrar Pago (C${prestamo.valor_cuota.toFixed(2)})</span>
-          </button>
-        )}
-
-        {prestamo.pagos && prestamo.pagos.length > 0 && (
-          <button
-            type="button"
-            onClick={() => setShowDeleteModal(true)}
-            className="w-full flex items-center justify-center gap-2 py-3.5 px-4 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-600 dark:text-red-400 font-semibold rounded-2xl transition-all active:scale-[0.98]"
-          >
-            <Trash2 size={18} />
-            <span>Eliminar Último Pago</span>
           </button>
         )}
         
