@@ -4,8 +4,8 @@
  */
 import { test, describe, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { __resetDb, __seed, db, mockSupabase } from "../src/lib/supabase/mockClient";
-import { pagoService } from "../src/services/databaseService";
+import { __resetDb, __seed, db, mockSupabase } from "../src/lib/supabase/mockClient.ts";
+import { pagoService } from "../src/services/databaseService.ts";
 
 const USER_ID = "user-1";
 const PRESTAMO_ID = "loan-1";

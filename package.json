@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --import tsx --test tests/"
+    "test": "NEXT_PUBLIC_ENABLE_MOCK_SUPABASE=true node --import tsx/esm --test tests/eliminarUltimoPago.test.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.0",
@@ -42,5 +42,6 @@
     "overrides": {
       "postcss": "^8.5.10"
     }
-  }
+  },
+  "type": "module"
 }
